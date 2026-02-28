@@ -1,6 +1,6 @@
 {
   "name": "blutwerte-backend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only --exit-child src/index.ts",
