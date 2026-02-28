@@ -17,11 +17,19 @@ export interface BloodEntry {
   values: BloodValue[];
 }
 
+export interface ApiToken {
+  id: string;
+  name: string;
+  token: string;
+  created_at: string; // ISO timestamp
+}
+
 export interface UserData {
   user_id: string;
   display_name: string;
   email: string;
   entries: BloodEntry[];
+  api_tokens?: ApiToken[];
 }
 
 // ─── Chat ─────────────────────────────────────────────────────────────────────

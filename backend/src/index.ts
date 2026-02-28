@@ -10,6 +10,7 @@ import { authRouter } from './routes/auth';
 import { bloodValuesRouter } from './routes/bloodvalues';
 import { referenceRouter } from './routes/reference';
 import { aiRouter } from './routes/ai';
+import { tokensRouter } from './routes/tokens';
 
 const FileStore = FileStoreFactory(session);
 const config = getConfig();
@@ -86,6 +87,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/bloodvalues', bloodValuesRouter);
 app.use('/api/reference', referenceRouter);
 app.use('/api/ai', aiRouter);
+app.use('/api/tokens', tokensRouter);
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 

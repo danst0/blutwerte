@@ -56,6 +56,18 @@ export interface ReferenceDatabase {
 
 export type ValueStatus = 'normal' | 'warning' | 'high' | 'low' | 'critical_high' | 'critical_low' | 'unknown';
 
+// ─── API Tokens ───────────────────────────────────────────────────────────────
+
+export interface ApiToken {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
+export interface ApiTokenCreated extends ApiToken {
+  token: string; // only present on creation
+}
+
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 export interface AuthUser {

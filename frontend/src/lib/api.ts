@@ -1,4 +1,4 @@
-import type { AuthUser, UserData, BloodEntry, ReferenceDatabase, ReferenceValue, ChatHistory, ChatMessage, ValueHistory } from '@/types';
+import type { AuthUser, UserData, BloodEntry, ReferenceDatabase, ReferenceValue, ChatHistory, ChatMessage, ValueHistory, ApiToken, ApiTokenCreated } from '@/types';
 
 const BASE = '/api';
 
@@ -67,6 +67,21 @@ export const reference = {
   search: (q: string) => request<ReferenceValue[]>(`/reference/search?q=${encodeURIComponent(q)}`),
 
   getByName: (name: string) => request<ReferenceValue>(`/reference/${encodeURIComponent(name)}`),
+};
+
+// ─── API Tokens ───────────────────────────────────────────────────────────────
+
+export const tokens = {
+  list: () => request<ApiToken[]>('/tokens'),
+
+  create: (name: string) =>
+    request<ApiTokenCreated>('/tokens', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+
+  delete: (id: string) =>
+    request<{ success: boolean }>(`/tokens/${id}`, { method: 'DELETE' }),
 };
 
 // ─── AI ───────────────────────────────────────────────────────────────────────

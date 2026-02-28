@@ -22,6 +22,7 @@ const navItems = [
   { to: '/enter', label: 'Werte eintragen', icon: PlusCircle },
   { to: '/values', label: 'Alle Werte', icon: TableProperties },
   { to: '/ai', label: 'KI-Doktor', icon: MessageSquareHeart },
+  { to: '/profile', label: 'Profil', icon: User },
 ];
 
 function useTheme() {

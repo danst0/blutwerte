@@ -8,6 +8,7 @@ import EnterValues from '@/pages/EnterValues';
 import AllValues from '@/pages/AllValues';
 import ValueDetail from '@/pages/ValueDetail';
 import AiDoctor from '@/pages/AiDoctor';
+import Profile from '@/pages/Profile';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -88,6 +89,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AiDoctor />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
           </ProtectedRoute>
         }
       />

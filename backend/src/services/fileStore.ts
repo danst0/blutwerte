@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getConfig } from '../config';
-import type { UserData, ChatHistory, ChatMessage, ReferenceDatabase, ReferenceValue } from '../types';
+import type { UserData, ChatHistory, ChatMessage, ReferenceDatabase, ReferenceValue, ApiToken } from '../types';
 
 function ensureDir(dirPath: string): void {
   if (!fs.existsSync(dirPath)) {
@@ -62,6 +62,23 @@ export function ensureUserProfile(
     saveUserData(data);
   }
   return data;
+}
+
+// ─── API Tokens ───────────────────────────────────────────────────────────────
+
+export function findUserByToken(token: string): string | null {
+  const config = getConfig();
+  const usersDir = path.join(config.DATA_DIR, 'users');
+  if (!fs.existsSync(usersDir)) return null;
+
+  for (const userDir of fs.readdirSync(usersDir)) {
+    const filePath = path.join(usersDir, userDir, 'bloodvalues.json');
+    const data = readJSON<UserData>(filePath, { user_id: '', display_name: '', email: '', entries: [] });
+    if (data.api_tokens?.some((t) => t.token === token)) {
+      return data.user_id;
+    }
+  }
+  return null;
 }
 
 // ─── Chat History ─────────────────────────────────────────────────────────────
