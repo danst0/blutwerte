@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile
     container_name: bloodtracker
     restart: unless-stopped
+    # Use the current host user's ID to avoid permission issues with volumes.
+    # Defaults to 1001 (appuser in Dockerfile) if not provided in .env.
     user: "${UID:-1001}:${GID:-1001}"
     ports:
       - "3000:3000"
@@ -31,10 +33,7 @@ services:
       - LLM_PROVIDER=${LLM_PROVIDER:-gemini}
       - LLM_API_KEY=${LLM_API_KEY:-}
       - LLM_API_URL=${LLM_API_URL:-}
-      - LLM_MODEL=${LLM_MODEL:-gemini-2.5-flash}
-
-      # ─── Development only (remove in production!) ─────────────────────────────
-      # - DEV_AUTO_LOGIN=true
+      - LLM_MODEL=${LLM_MODEL:-gemini-2.0-flash}
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
@@ -42,24 +41,3 @@ services:
       timeout: 5s
       start_period: 15s
       retries: 3
-
-    labels:
-      # Traefik configuration (uncomment and adapt for your setup)
-      - "traefik.enable=true"
-      - "traefik.http.routers.bloodtracker.rule=Host(`bloodtracker.example.com`)"
-      - "traefik.http.routers.bloodtracker.entrypoints=websecure"
-      - "traefik.http.routers.bloodtracker.tls.certresolver=letsencrypt"
-      - "traefik.http.services.bloodtracker.loadbalancer.server.port=3000"
-
-# ─── Optional: Ollama for local LLM ──────────────────────────────────────────
-#  ollama:
-#    image: ollama/ollama:latest
-#    container_name: ollama
-#    restart: unless-stopped
-#    volumes:
-#      - ollama_data:/root/.ollama
-#    ports:
-#      - "11434:11434"
-
-#volumes:
-#  ollama_data:
