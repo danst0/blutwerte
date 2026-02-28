@@ -77,16 +77,13 @@ export default function EnterValues() {
     setRows((prev) => {
       // Don't add duplicates
       if (prev.some((r) => r.name === ref.name)) return prev;
-      // short_name: use first alias if it exists and is shorter than the name
-      const firstAlias = ref.aliases?.[0];
-      const short_name = firstAlias && firstAlias.length < ref.name.length ? firstAlias : undefined;
       return [
         ...prev,
         {
           id: crypto.randomUUID(),
           name: ref.name,
-          long_name: ref.name,
-          short_name,
+          long_name: ref.long_name || ref.name,
+          short_name: ref.short_name,
           value: '',
           unit: ref.unit,
           category: ref.category,
@@ -244,8 +241,13 @@ export default function EnterValues() {
                     className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed text-left border-b border-gray-100 dark:border-gray-800 last:border-0"
                   >
                     <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{ref.name}</p>
-                      <p className="text-xs text-gray-400">{ref.category} · {ref.unit}</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{ref.long_name || ref.name}</p>
+                      {ref.long_name && ref.long_name !== ref.name && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{ref.name} · {ref.category} · {ref.unit}</p>
+                      )}
+                      {(!ref.long_name || ref.long_name === ref.name) && (
+                        <p className="text-xs text-gray-400">{ref.category} · {ref.unit}</p>
+                      )}
                     </div>
                     {rows.some((r) => r.name === ref.name) && (
                       <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />

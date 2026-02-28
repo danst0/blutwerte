@@ -29,6 +29,8 @@ export interface UserData {
 export interface ReferenceValue {
   id: string;
   name: string;
+  short_name?: string;
+  long_name?: string;
   aliases: string[];
   category: string;
   unit: string;
