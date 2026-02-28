@@ -1,8 +1,6 @@
 services:
   bloodtracker:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${BLOODTRACKER_IMAGE:-ghcr.io/danst0/blutwerte:latest}
     container_name: bloodtracker
     restart: unless-stopped
     user: "${UID:-1001}:${GID:-1001}"
