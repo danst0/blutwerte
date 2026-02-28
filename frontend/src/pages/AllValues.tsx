@@ -242,7 +242,10 @@ export default function AllValues() {
                             className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
                           >
                             <div className="min-w-0">
-                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{v.name}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{v.long_name || v.name}</p>
+                              {v.long_name && v.long_name !== v.name && (
+                                <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{v.name}</p>
+                              )}
                               <p className="font-semibold text-gray-900 dark:text-gray-100">
                                 {formatNumber(v.value)} <span className="text-xs font-normal text-gray-400">{v.unit}</span>
                               </p>

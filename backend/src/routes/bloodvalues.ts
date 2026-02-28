@@ -12,6 +12,8 @@ const bloodValueSchema = z.object({
   value: z.number().finite(),
   unit: z.string().min(1).max(50),
   category: z.string().min(1).max(100),
+  short_name: z.string().max(100).optional(),
+  long_name: z.string().max(200).optional(),
 });
 
 const entrySchema = z.object({

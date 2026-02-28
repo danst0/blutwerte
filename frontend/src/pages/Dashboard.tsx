@@ -57,6 +57,7 @@ function getTrend(history: { value: number }[]) {
 
 interface ValueSummary {
   name: string;
+  long_name?: string;
   category: string;
   latestValue: number;
   unit: string;
@@ -94,17 +95,18 @@ export default function Dashboard() {
     if (!userData) return [];
     const sorted = [...userData.entries].sort((a, b) => a.date.localeCompare(b.date));
     const byName: Record<string, { date: string; value: number }[]> = {};
-    const meta: Record<string, { category: string; unit: string }> = {};
+    const meta: Record<string, { category: string; unit: string; long_name?: string }> = {};
     for (const entry of sorted) {
       for (const val of entry.values) {
         if (!byName[val.name]) byName[val.name] = [];
         byName[val.name].push({ date: entry.date, value: val.value });
-        meta[val.name] = { category: val.category, unit: val.unit };
+        meta[val.name] = { category: val.category, unit: val.unit, long_name: val.long_name };
       }
     }
     return Object.entries(byName)
       .map(([name, history]) => ({
         name,
+        long_name: meta[name].long_name,
         category: meta[name].category,
         latestValue: history[history.length - 1].value,
         unit: meta[name].unit,
@@ -223,8 +225,11 @@ export default function Dashboard() {
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-900 dark:text-gray-100 text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
-                              {v.name}
+                              {v.long_name || v.name}
                             </p>
+                            {v.long_name && v.long_name !== v.name && (
+                              <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{v.name}</p>
+                            )}
                             <StatusBadge status={status} className="mt-1" />
                           </div>
                           <div className="flex items-center gap-1 ml-2 flex-shrink-0">

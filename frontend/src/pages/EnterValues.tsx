@@ -12,6 +12,8 @@ import { Plus, Trash2, Search, CheckCircle } from 'lucide-react';
 interface ValueRow {
   id: string;
   name: string;
+  long_name?: string;
+  short_name?: string;
   value: string;
   unit: string;
   category: string;
@@ -75,11 +77,16 @@ export default function EnterValues() {
     setRows((prev) => {
       // Don't add duplicates
       if (prev.some((r) => r.name === ref.name)) return prev;
+      // short_name: use first alias if it exists and is shorter than the name
+      const firstAlias = ref.aliases?.[0];
+      const short_name = firstAlias && firstAlias.length < ref.name.length ? firstAlias : undefined;
       return [
         ...prev,
         {
           id: crypto.randomUUID(),
           name: ref.name,
+          long_name: ref.name,
+          short_name,
           value: '',
           unit: ref.unit,
           category: ref.category,
@@ -142,6 +149,8 @@ export default function EnterValues() {
           value: parseFloat(r.value),
           unit: r.unit.trim(),
           category: r.category.trim() || 'Sonstige',
+          ...(r.short_name ? { short_name: r.short_name } : {}),
+          ...(r.long_name ? { long_name: r.long_name } : {}),
         })),
       });
       setSuccess(true);

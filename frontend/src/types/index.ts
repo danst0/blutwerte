@@ -5,6 +5,8 @@ export interface BloodValue {
   value: number;
   unit: string;
   category: string;
+  short_name?: string;
+  long_name?: string;
 }
 
 export interface BloodEntry {
