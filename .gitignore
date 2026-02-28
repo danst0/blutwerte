@@ -9,3 +9,5 @@ data/ai_rate_limits.json
 .DS_Store
 Thumbs.db
 coverage/
+docker-compose.yml
+Blutwerte*.numbers
