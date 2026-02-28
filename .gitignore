@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.local
+data/users/
+data/sessions/
+data/ai_rate_limits.json
+*.log
+.DS_Store
+Thumbs.db
+coverage/

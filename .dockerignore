@@ -1,0 +1,14 @@
+**/.git
+**/.gitignore
+**/.env
+**/.env.local
+**/node_modules
+**/dist
+**/.DS_Store
+**/Thumbs.db
+**/*.log
+
+# Keep these out of context for security
+**/.env.example
+**/coverage
+**/.nyc_output

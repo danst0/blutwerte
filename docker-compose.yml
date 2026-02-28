@@ -1,0 +1,64 @@
+services:
+  bloodtracker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bloodtracker
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      # ─── App ──────────────────────────────────────────────────────────────────
+      - NODE_ENV=production
+      - PORT=3000
+      - APP_SECRET=${APP_SECRET:-change-this-to-a-secure-random-string-of-32-chars}
+      - DATA_DIR=/app/data
+      - LOG_LEVEL=info
+      - TRUST_PROXY=1
+      - SECURE_COOKIES=true
+
+      # ─── OIDC ─────────────────────────────────────────────────────────────────
+      - OIDC_ISSUER_URL=${OIDC_ISSUER_URL:-https://auth.example.com/realms/myrealm}
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-bloodtracker}
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}
+      - OIDC_REDIRECT_URI=${OIDC_REDIRECT_URI:-https://bloodtracker.example.com/api/auth/callback}
+      - OIDC_SCOPES=${OIDC_SCOPES:-openid profile email}
+
+      # ─── LLM ──────────────────────────────────────────────────────────────────
+      - LLM_PROVIDER=${LLM_PROVIDER:-gemini}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_API_URL=${LLM_API_URL:-}
+      - LLM_MODEL=${LLM_MODEL:-gemini-2.5-flash}
+
+      # ─── Development only (remove in production!) ─────────────────────────────
+      # - DEV_AUTO_LOGIN=true
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+    labels:
+      # Traefik configuration (uncomment and adapt for your setup)
+      - "traefik.enable=true"
+      - "traefik.http.routers.bloodtracker.rule=Host(`bloodtracker.example.com`)"
+      - "traefik.http.routers.bloodtracker.entrypoints=websecure"
+      - "traefik.http.routers.bloodtracker.tls.certresolver=letsencrypt"
+      - "traefik.http.services.bloodtracker.loadbalancer.server.port=3000"
+
+# ─── Optional: Ollama for local LLM ──────────────────────────────────────────
+#  ollama:
+#    image: ollama/ollama:latest
+#    container_name: ollama
+#    restart: unless-stopped
+#    volumes:
+#      - ollama_data:/root/.ollama
+#    ports:
+#      - "11434:11434"
+
+#volumes:
+#  ollama_data:
