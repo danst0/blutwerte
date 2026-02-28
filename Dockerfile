@@ -4,7 +4,7 @@ FROM node:20-alpine AS frontend-builder
 WORKDIR /app/frontend
 
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm ci
 
 COPY frontend/ ./
 RUN npm run build
@@ -16,7 +16,7 @@ WORKDIR /app/backend
 
 # Install all deps (including devDeps for TypeScript compiler)
 COPY backend/package*.json ./
-RUN npm install
+RUN npm ci
 
 # Copy source and compile
 COPY backend/ ./
@@ -28,7 +28,7 @@ FROM node:20-alpine AS backend-deps
 WORKDIR /app/backend
 
 COPY backend/package*.json ./
-RUN npm install --omit=dev
+RUN npm ci --omit=dev
 
 # ─── Stage 4: Production Image ────────────────────────────────────────────────
 FROM node:20-alpine AS production
