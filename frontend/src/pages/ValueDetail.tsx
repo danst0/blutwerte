@@ -125,9 +125,9 @@ export default function ValueDetail() {
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{valueName}</h1>
-          {ref?.aliases?.length > 0 && (
+          {(ref?.aliases?.length ?? 0) > 0 && (
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Auch bekannt als: {ref.aliases.join(', ')}
+              Auch bekannt als: {ref?.aliases.join(', ')}
             </p>
           )}
         </div>

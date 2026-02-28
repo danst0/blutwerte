@@ -273,7 +273,7 @@ export default function Dashboard() {
               </Link>
             </div>
             <div className="space-y-3">
-              {userData.entries.slice(0, 5).map((entry) => (
+              {userData?.entries.slice(0, 5).map((entry) => (
                 <div
                   key={entry.id}
                   className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
