@@ -17,6 +17,7 @@ import {
   Droplets,
   User,
   Database,
+  Share2,
 } from 'lucide-react';
 
 const baseNavItems = [
@@ -24,6 +25,7 @@ const baseNavItems = [
   { to: '/enter', label: 'Werte eintragen', icon: PlusCircle },
   { to: '/scan', label: 'Scan Import', icon: ScanLine },
   { to: '/values', label: 'Alle Werte', icon: TableProperties },
+  { to: '/shared', label: 'Geteilte Daten', icon: Share2 },
   { to: '/ai', label: 'KI-Doktor', icon: MessageSquareHeart },
   { to: '/profile', label: 'Profil', icon: User },
 ];

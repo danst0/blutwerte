@@ -4,6 +4,23 @@ import 'express-session';
 
 export type Gender = 'male' | 'female';
 
+// ─── Lifestyle ────────────────────────────────────────────────────────────────
+
+export type SmokingStatus = 'never' | 'former' | 'occasional' | 'regular';
+export type AlcoholConsumption = 'never' | 'rarely' | 'moderate' | 'regular';
+export type ExerciseLevel = 'none' | 'light' | 'moderate' | 'active' | 'very_active';
+export type DietType = 'mixed' | 'vegetarian' | 'vegan' | 'pescatarian' | 'keto' | 'other';
+export type StressLevel = 'low' | 'moderate' | 'high' | 'very_high';
+
+export interface Lifestyle {
+  smoking?: SmokingStatus;
+  alcohol?: AlcoholConsumption;
+  exercise?: ExerciseLevel;
+  diet?: DietType;
+  sleep_hours?: number;
+  stress_level?: StressLevel;
+}
+
 // ─── Blood Values ──────────────────────────────────────────────────────────────
 
 export interface BloodValue {
@@ -35,8 +52,12 @@ export interface UserData {
   display_name: string;
   email: string;
   gender?: Gender;
+  diagnoses?: string[];
+  medications?: string[];
+  lifestyle?: Lifestyle;
   entries: BloodEntry[];
   api_tokens?: ApiToken[];
+  shares_given?: Share[];
 }
 
 // ─── Chat ─────────────────────────────────────────────────────────────────────
@@ -102,6 +123,31 @@ declare module 'express-session' {
     oidcCodeVerifier?: string;
     oidcNonce?: string;
   }
+}
+
+// ─── Shares ───────────────────────────────────────────────────────────────────
+
+export interface Share {
+  id: string;
+  owner_user_id: string;
+  owner_display_name: string;
+  shared_with_email: string;
+  shared_with_user_id?: string;
+  permission: 'read';
+  expires_at?: string;
+  created_at: string;
+}
+
+export interface ShareIndexEntry {
+  share_id: string;
+  owner_user_id: string;
+  owner_display_name: string;
+  expires_at?: string;
+  created_at: string;
+}
+
+export interface SharesIndex {
+  [email: string]: ShareIndexEntry[];
 }
 
 // ─── Scan Import ──────────────────────────────────────────────────────────────

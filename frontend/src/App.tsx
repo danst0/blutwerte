@@ -10,6 +10,7 @@ import AllValues from '@/pages/AllValues';
 import ValueDetail from '@/pages/ValueDetail';
 import AiDoctor from '@/pages/AiDoctor';
 import Profile from '@/pages/Profile';
+import SharedData from '@/pages/SharedData';
 import AdminReference from '@/pages/AdminReference';
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
@@ -129,6 +130,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Profile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/shared"
+        element={
+          <ProtectedRoute>
+            <SharedData />
           </ProtectedRoute>
         }
       />

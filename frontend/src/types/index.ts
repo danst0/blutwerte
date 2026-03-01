@@ -122,6 +122,27 @@ export interface ScanResult {
   values: ExtractedBloodValue[];
 }
 
+// ─── Shares ──────────────────────────────────────────────────────────────────
+
+export interface Share {
+  id: string;
+  owner_user_id: string;
+  owner_display_name: string;
+  shared_with_email: string;
+  shared_with_user_id?: string;
+  permission: 'read';
+  expires_at?: string;
+  created_at: string;
+}
+
+export interface ReceivedShare {
+  share_id: string;
+  owner_user_id: string;
+  owner_display_name: string;
+  expires_at?: string;
+  created_at: string;
+}
+
 // ─── History ──────────────────────────────────────────────────────────────────
 
 export interface ValueHistoryPoint {

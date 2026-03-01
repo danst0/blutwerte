@@ -1,4 +1,4 @@
-import type { AuthUser, UserData, BloodEntry, ReferenceDatabase, ReferenceValue, ChatHistory, ChatMessage, ValueHistory, ApiToken, ApiTokenCreated, Gender, ScanResult } from '@/types';
+import type { AuthUser, UserData, BloodEntry, ReferenceDatabase, ReferenceValue, ChatHistory, ChatMessage, ValueHistory, ApiToken, ApiTokenCreated, Gender, ScanResult, Share, ReceivedShare } from '@/types';
 
 const BASE = '/api';
 
@@ -148,4 +148,29 @@ export const ai = {
 
     return res.json();
   },
+};
+
+// ─── Shares ───────────────────────────────────────────────────────────────────
+
+export const shares = {
+  getGiven: () => request<Share[]>('/shares/given'),
+
+  create: (email: string, expires_at?: string) =>
+    request<Share>('/shares', {
+      method: 'POST',
+      body: JSON.stringify({ email, expires_at }),
+    }),
+
+  revoke: (id: string) =>
+    request<{ success: boolean }>(`/shares/${id}`, { method: 'DELETE' }),
+
+  getReceived: () => request<ReceivedShare[]>('/shares/received'),
+
+  getSharedData: (shareId: string) =>
+    request<{ user_id: string; display_name: string; gender?: Gender; entries: import('@/types').BloodEntry[] }>(
+      `/shares/received/${shareId}/data`
+    ),
+
+  getSharedReference: (shareId: string) =>
+    request<ReferenceDatabase>(`/shares/received/${shareId}/reference`),
 };

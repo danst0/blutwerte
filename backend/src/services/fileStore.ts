@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getConfig } from '../config';
-import type { UserData, ChatHistory, ChatMessage, ReferenceDatabase, ReferenceValue, ApiToken } from '../types';
+import type { UserData, ChatHistory, ChatMessage, ReferenceDatabase, ReferenceValue, ApiToken, SharesIndex, ShareIndexEntry } from '../types';
 
 function ensureDir(dirPath: string): void {
   if (!fs.existsSync(dirPath)) {
@@ -222,6 +222,37 @@ export function searchReferenceValues(query: string): ReferenceValue[] {
       v.aliases.some((a) => a.toLowerCase().includes(lower)) ||
       v.category.toLowerCase().includes(lower)
   );
+}
+
+// ─── Rate Limiting (AI requests) ──────────────────────────────────────────────
+
+// ─── Shares ───────────────────────────────────────────────────────────────────
+
+export function getSharesIndex(): SharesIndex {
+  const config = getConfig();
+  const filePath = path.join(config.DATA_DIR, 'shares.json');
+  return readJSON<SharesIndex>(filePath, {});
+}
+
+export function saveSharesIndex(index: SharesIndex): void {
+  const config = getConfig();
+  const filePath = path.join(config.DATA_DIR, 'shares.json');
+  writeJSON(filePath, index);
+}
+
+export function findUserByEmail(email: string): UserData | null {
+  const config = getConfig();
+  const usersDir = path.join(config.DATA_DIR, 'users');
+  if (!fs.existsSync(usersDir)) return null;
+
+  for (const userDir of fs.readdirSync(usersDir)) {
+    const filePath = path.join(usersDir, userDir, 'bloodvalues.json');
+    const data = readJSON<UserData>(filePath, { user_id: '', display_name: '', email: '', entries: [] });
+    if (data.email && data.email.toLowerCase() === email.toLowerCase()) {
+      return data;
+    }
+  }
+  return null;
 }
 
 // ─── Rate Limiting (AI requests) ──────────────────────────────────────────────
