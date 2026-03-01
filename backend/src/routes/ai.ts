@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
+import multer from 'multer';
 import { requireAuth, asyncHandler } from '../middleware/requireAuth';
 import { getUserData, getChatHistory, saveChatHistory, checkAndIncrementAIRate } from '../services/fileStore';
-import { chat } from '../services/llm';
+import { chat, analyzeBloodTestImage } from '../services/llm';
 import type { LLMMessage, ChatMessage } from '../types';
 
 export const aiRouter = Router();
@@ -11,6 +12,19 @@ aiRouter.use(requireAuth);
 
 const messageSchema = z.object({
   message: z.string().min(1).max(4000),
+});
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Nur Bilder (JPEG, PNG, WebP) und PDFs sind erlaubt.'));
+    }
+  },
 });
 
 // GET /api/ai/history – get chat history
@@ -93,5 +107,36 @@ aiRouter.post(
       message: assistantMessage,
       userMessage,
     });
+  })
+);
+
+// POST /api/ai/scan – analyze blood test image
+aiRouter.post(
+  '/scan',
+  upload.single('file'),
+  asyncHandler(async (req, res) => {
+    const userId = req.session.userId!;
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'Keine Datei hochgeladen.' });
+    }
+
+    // Rate limiting: share the same daily limit with chat
+    const allowed = checkAndIncrementAIRate(userId, 50);
+    if (!allowed) {
+      return res.status(429).json({
+        error: 'Rate limit exceeded',
+        message: 'Du hast das tägliche Limit von 50 KI-Anfragen erreicht. Versuche es morgen wieder.',
+      });
+    }
+
+    try {
+      const result = await analyzeBloodTestImage(req.file.buffer, req.file.mimetype);
+      res.json(result);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error('Scan analysis error:', msg);
+      res.status(422).json({ error: msg });
+    }
   })
 );

@@ -1,4 +1,4 @@
-import type { AuthUser, UserData, BloodEntry, ReferenceDatabase, ReferenceValue, ChatHistory, ChatMessage, ValueHistory, ApiToken, ApiTokenCreated, Gender } from '@/types';
+import type { AuthUser, UserData, BloodEntry, ReferenceDatabase, ReferenceValue, ChatHistory, ChatMessage, ValueHistory, ApiToken, ApiTokenCreated, Gender, ScanResult } from '@/types';
 
 const BASE = '/api';
 
@@ -127,4 +127,25 @@ export const ai = {
       method: 'POST',
       body: JSON.stringify({ message }),
     }),
+
+  scan: async (file: File): Promise<ScanResult> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await fetch(`${BASE}/ai/scan`, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: res.statusText }));
+      const error = new Error(body.message || body.error || `HTTP ${res.status}`);
+      (error as ApiError).status = res.status;
+      (error as ApiError).body = body;
+      throw error;
+    }
+
+    return res.json();
+  },
 };

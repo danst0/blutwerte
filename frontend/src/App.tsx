@@ -5,6 +5,7 @@ import { Layout } from '@/components/Layout';
 import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
 import EnterValues from '@/pages/EnterValues';
+import ScanImport from '@/pages/ScanImport';
 import AllValues from '@/pages/AllValues';
 import ValueDetail from '@/pages/ValueDetail';
 import AiDoctor from '@/pages/AiDoctor';
@@ -88,6 +89,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <EnterValues />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/scan"
+        element={
+          <ProtectedRoute>
+            <ScanImport />
           </ProtectedRoute>
         }
       />

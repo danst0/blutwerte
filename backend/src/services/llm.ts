@@ -1,6 +1,6 @@
 import { getConfig } from '../config';
-import type { Gender, LLMMessage, LLMResponse, UserData, ReferenceValue } from '../types';
-import { findReferenceValue } from './fileStore';
+import type { Gender, LLMMessage, LLMResponse, UserData, ReferenceValue, ExtractedBloodValue, ScanResult } from '../types';
+import { findReferenceValue, getReferenceDatabase } from './fileStore';
 
 const SYSTEM_PROMPT = `Du bist ein hilfreicher medizinischer Assistent, der Blutwerte erklärt und einordnet.
 Du hast Zugriff auf die Blutwerte des Nutzers und kannst Trends analysieren.
@@ -299,4 +299,157 @@ export async function chat(
       error: `KI-Doktor ist momentan nicht verfügbar: ${msg}`,
     };
   }
+}
+
+// ─── Blood Test Scan Analysis ─────────────────────────────────────────────────
+
+const SCAN_PROMPT = `Du bist ein Experte für die Analyse von Laborberichten. Extrahiere ALLE Blutwerte aus dem Bild/Dokument.
+
+Antworte AUSSCHLIESSLICH mit einem JSON-Objekt im folgenden Format (kein Markdown, kein Text drumherum):
+{
+  "date": "YYYY-MM-DD oder null wenn nicht erkennbar",
+  "lab_name": "Name des Labors oder null wenn nicht erkennbar",
+  "values": [
+    { "name": "Bezeichnung des Wertes", "value": 123.4, "unit": "Einheit" }
+  ]
+}
+
+Wichtige Regeln:
+- "value" muss immer eine Zahl sein (kein Text)
+- Verwende die exakte Bezeichnung wie sie auf dem Laborbericht steht
+- Extrahiere ALLE sichtbaren Werte, auch wenn sie im Normalbereich liegen
+- Bei Kommazahlen verwende einen Punkt als Dezimaltrenner
+- Ignoriere Referenzbereiche, extrahiere nur die gemessenen Werte
+- Wenn das Bild keinen Laborbericht zeigt, antworte mit: { "values": [], "error": "Kein Laborbericht erkannt" }`;
+
+function matchAndEnrichValues(rawValues: Array<{ name: string; value: number; unit: string }>): ExtractedBloodValue[] {
+  const db = getReferenceDatabase();
+
+  return rawValues.map((raw) => {
+    const ref = findReferenceValue(raw.name);
+    if (ref) {
+      return {
+        name: ref.name,
+        value: raw.value,
+        unit: raw.unit || ref.unit,
+        category: ref.category,
+        short_name: ref.short_name,
+        long_name: ref.long_name,
+        ref_id: ref.id,
+      };
+    }
+
+    // Try fuzzy match: check if any reference value's name/alias is contained
+    const lower = raw.name.toLowerCase();
+    const fuzzy = db.values.find(
+      (v) =>
+        lower.includes(v.name.toLowerCase()) ||
+        v.name.toLowerCase().includes(lower) ||
+        v.aliases.some((a) => lower.includes(a.toLowerCase()) || a.toLowerCase().includes(lower))
+    );
+
+    if (fuzzy) {
+      return {
+        name: fuzzy.name,
+        value: raw.value,
+        unit: raw.unit || fuzzy.unit,
+        category: fuzzy.category,
+        short_name: fuzzy.short_name,
+        long_name: fuzzy.long_name,
+        ref_id: fuzzy.id,
+      };
+    }
+
+    return {
+      name: raw.name,
+      value: raw.value,
+      unit: raw.unit,
+    };
+  });
+}
+
+export async function analyzeBloodTestImage(
+  imageBuffer: Buffer,
+  mimeType: string
+): Promise<ScanResult> {
+  const config = getConfig();
+
+  if (config.LLM_PROVIDER !== 'gemini') {
+    throw new Error('Scan-Import ist nur mit dem Gemini-Provider verfügbar.');
+  }
+
+  const apiKey = config.LLM_API_KEY;
+  if (!apiKey) throw new Error('LLM_API_KEY ist nicht konfiguriert.');
+
+  const base = (config.LLM_API_URL || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/$/, '');
+  const model = config.LLM_MODEL || 'gemini-2.5-flash';
+  const url = `${base}/models/${model}:generateContent?key=${apiKey}`;
+
+  const base64Data = imageBuffer.toString('base64');
+
+  const body = {
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { inlineData: { mimeType, data: base64Data } },
+          { text: SCAN_PROMPT },
+        ],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens: 8192,
+    },
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Gemini API error ${response.status}: ${err}`);
+  }
+
+  const data = await response.json() as {
+    candidates?: Array<{ content: { parts: Array<{ text: string }> } }>;
+    error?: { message: string };
+  };
+
+  if (data.error) throw new Error(`Gemini error: ${data.error.message}`);
+
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+
+  // Parse JSON from response (handle markdown code blocks)
+  let jsonStr = text.trim();
+  const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlockMatch) {
+    jsonStr = codeBlockMatch[1].trim();
+  }
+
+  let parsed: { date?: string; lab_name?: string; values?: Array<{ name: string; value: number; unit: string }>; error?: string };
+  try {
+    parsed = JSON.parse(jsonStr);
+  } catch {
+    throw new Error('KI-Antwort konnte nicht als JSON interpretiert werden.');
+  }
+
+  if (parsed.error) {
+    throw new Error(parsed.error);
+  }
+
+  if (!parsed.values || !Array.isArray(parsed.values)) {
+    throw new Error('Keine Blutwerte im Scan erkannt.');
+  }
+
+  const enrichedValues = matchAndEnrichValues(parsed.values);
+
+  return {
+    date: parsed.date ?? undefined,
+    lab_name: parsed.lab_name ?? undefined,
+    values: enrichedValues,
+  };
 }

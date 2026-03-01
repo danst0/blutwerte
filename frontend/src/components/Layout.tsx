@@ -6,6 +6,7 @@ import { auth } from '@/lib/api';
 import {
   LayoutDashboard,
   PlusCircle,
+  ScanLine,
   TableProperties,
   MessageSquareHeart,
   Moon,
@@ -21,6 +22,7 @@ import {
 const baseNavItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/enter', label: 'Werte eintragen', icon: PlusCircle },
+  { to: '/scan', label: 'Scan Import', icon: ScanLine },
   { to: '/values', label: 'Alle Werte', icon: TableProperties },
   { to: '/ai', label: 'KI-Doktor', icon: MessageSquareHeart },
   { to: '/profile', label: 'Profil', icon: User },

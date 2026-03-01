@@ -104,6 +104,24 @@ export interface ChatHistory {
   messages: ChatMessage[];
 }
 
+// ─── Scan Import ──────────────────────────────────────────────────────────────
+
+export interface ExtractedBloodValue {
+  name: string;
+  value: number;
+  unit: string;
+  category?: string;
+  short_name?: string;
+  long_name?: string;
+  ref_id?: string;
+}
+
+export interface ScanResult {
+  date?: string;
+  lab_name?: string;
+  values: ExtractedBloodValue[];
+}
+
 // ─── History ──────────────────────────────────────────────────────────────────
 
 export interface ValueHistoryPoint {
