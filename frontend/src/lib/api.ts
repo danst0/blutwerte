@@ -1,4 +1,4 @@
-import type { AuthUser, UserData, BloodEntry, ReferenceDatabase, ReferenceValue, ChatHistory, ChatMessage, ValueHistory, ApiToken, ApiTokenCreated, Gender, ScanResult, Share, ReceivedShare } from '@/types';
+import type { AuthUser, UserData, BloodEntry, ReferenceDatabase, ReferenceValue, ChatHistory, ChatMessage, ValueHistory, ApiToken, ApiTokenCreated, Gender, Lifestyle, ScanResult, Share, ReceivedShare } from '@/types';
 
 const BASE = '/api';
 
@@ -36,8 +36,8 @@ export const auth = {
 // ─── User ────────────────────────────────────────────────────────────────────
 
 export const user = {
-  updateProfile: (data: { gender: Gender }) =>
-    request<{ success: boolean; gender: Gender }>('/user/profile', {
+  updateProfile: (data: { gender?: Gender; diagnoses?: string[]; medications?: string[]; lifestyle?: Lifestyle }) =>
+    request<{ success: boolean; gender?: Gender; diagnoses?: string[]; medications?: string[]; lifestyle?: Lifestyle }>('/user/profile', {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),

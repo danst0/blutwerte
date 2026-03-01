@@ -2,6 +2,23 @@
 
 export type Gender = 'male' | 'female';
 
+// ─── Lifestyle ────────────────────────────────────────────────────────────────
+
+export type SmokingStatus = 'never' | 'former' | 'occasional' | 'regular';
+export type AlcoholConsumption = 'never' | 'rarely' | 'moderate' | 'regular';
+export type ExerciseLevel = 'none' | 'light' | 'moderate' | 'active' | 'very_active';
+export type DietType = 'mixed' | 'vegetarian' | 'vegan' | 'pescatarian' | 'keto' | 'other';
+export type StressLevel = 'low' | 'moderate' | 'high' | 'very_high';
+
+export interface Lifestyle {
+  smoking?: SmokingStatus;
+  alcohol?: AlcoholConsumption;
+  exercise?: ExerciseLevel;
+  diet?: DietType;
+  sleep_hours?: number;
+  stress_level?: StressLevel;
+}
+
 // ─── Blood Values ──────────────────────────────────────────────────────────────
 
 export interface BloodValue {
@@ -86,6 +103,9 @@ export interface AuthUser {
   email?: string;
   isAdmin?: boolean;
   gender?: Gender;
+  diagnoses?: string[];
+  medications?: string[];
+  lifestyle?: Lifestyle;
 }
 
 // ─── Chat ─────────────────────────────────────────────────────────────────────

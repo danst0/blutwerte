@@ -137,5 +137,8 @@ authRouter.get('/me', (req, res) => {
     email: req.session.email,
     isAdmin,
     gender: userData.gender,
+    diagnoses: userData.diagnoses,
+    medications: userData.medications,
+    lifestyle: userData.lifestyle,
   });
 });

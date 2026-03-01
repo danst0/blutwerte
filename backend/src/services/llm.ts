@@ -4,6 +4,7 @@ import { findReferenceValue, getReferenceDatabase } from './fileStore';
 
 const SYSTEM_PROMPT = `Du bist ein hilfreicher medizinischer Assistent, der Blutwerte erklärt und einordnet.
 Du hast Zugriff auf die Blutwerte des Nutzers und kannst Trends analysieren.
+Berücksichtige die Diagnosen, Medikamente und Lifestyle-Informationen des Nutzers bei deiner Analyse, sofern vorhanden.
 Antworte auf Deutsch, verständlich und einfühlsam.
 Gib IMMER am Ende deiner Antwort den Hinweis, dass deine Aussagen keine ärztliche Diagnose ersetzen und bei gesundheitlichen Bedenken ein Arzt aufgesucht werden sollte.
 Wenn Werte kritisch außerhalb des Referenzbereichs liegen, empfiehl dringend einen zeitnahen Arztbesuch.
@@ -26,8 +27,49 @@ function getEffectiveRange(ref: ReferenceValue, gender?: Gender): { min: number;
 }
 
 function buildUserContext(userData: UserData): string {
+  let context = '';
+
+  // Profile info
+  context += `Profil von ${userData.display_name}`;
+  if (userData.gender) context += ` (${userData.gender === 'male' ? 'männlich' : 'weiblich'})`;
+  context += `:\n\n`;
+
+  // Diagnoses
+  if (userData.diagnoses && userData.diagnoses.length > 0) {
+    context += `**Diagnosen:** ${userData.diagnoses.join(', ')}\n\n`;
+  }
+
+  // Medications
+  if (userData.medications && userData.medications.length > 0) {
+    context += `**Medikamente:** ${userData.medications.join(', ')}\n\n`;
+  }
+
+  // Lifestyle
+  if (userData.lifestyle) {
+    const ls = userData.lifestyle;
+    const parts: string[] = [];
+    const labels: Record<string, Record<string, string>> = {
+      smoking: { never: 'Nichtraucher', former: 'Ex-Raucher', occasional: 'Gelegenheitsraucher', regular: 'Raucher' },
+      alcohol: { never: 'Kein Alkohol', rarely: 'Selten', moderate: 'Moderat', regular: 'Regelmäßig' },
+      exercise: { none: 'Kein Sport', light: 'Leichte Aktivität', moderate: 'Moderate Aktivität', active: 'Aktiv', very_active: 'Sehr aktiv' },
+      diet: { mixed: 'Mischkost', vegetarian: 'Vegetarisch', vegan: 'Vegan', pescatarian: 'Pescatarisch', keto: 'Keto', other: 'Andere' },
+      stress_level: { low: 'Niedrig', moderate: 'Moderat', high: 'Hoch', very_high: 'Sehr hoch' },
+    };
+    if (ls.smoking) parts.push(`Rauchen: ${labels.smoking[ls.smoking]}`);
+    if (ls.alcohol) parts.push(`Alkohol: ${labels.alcohol[ls.alcohol]}`);
+    if (ls.exercise) parts.push(`Bewegung: ${labels.exercise[ls.exercise]}`);
+    if (ls.diet) parts.push(`Ernährung: ${labels.diet[ls.diet]}`);
+    if (ls.sleep_hours) parts.push(`Schlaf: ${ls.sleep_hours} Std/Nacht`);
+    if (ls.stress_level) parts.push(`Stress: ${labels.stress_level[ls.stress_level]}`);
+    if (parts.length > 0) {
+      context += `**Lifestyle:** ${parts.join(' | ')}\n\n`;
+    }
+  }
+
+  // Blood values
   if (userData.entries.length === 0) {
-    return 'Der Nutzer hat noch keine Blutwerte eingetragen.';
+    context += 'Der Nutzer hat noch keine Blutwerte eingetragen.\n';
+    return context;
   }
 
   const gender = userData.gender;
@@ -35,10 +77,6 @@ function buildUserContext(userData: UserData): string {
     .slice()
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 5);
-
-  let context = `Blutwerte von ${userData.display_name}`;
-  if (gender) context += ` (${gender === 'male' ? 'männlich' : 'weiblich'})`;
-  context += `:\n\n`;
 
   for (const entry of recent) {
     context += `**Eintrag vom ${entry.date}`;
