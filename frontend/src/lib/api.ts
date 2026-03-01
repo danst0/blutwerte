@@ -1,4 +1,4 @@
-import type { AuthUser, UserData, BloodEntry, ReferenceDatabase, ReferenceValue, ChatHistory, ChatMessage, ValueHistory, ApiToken, ApiTokenCreated } from '@/types';
+import type { AuthUser, UserData, BloodEntry, ReferenceDatabase, ReferenceValue, ChatHistory, ChatMessage, ValueHistory, ApiToken, ApiTokenCreated, Gender } from '@/types';
 
 const BASE = '/api';
 
@@ -31,6 +31,16 @@ export const auth = {
   me: () => request<AuthUser>('/auth/me'),
   login: () => { window.location.href = `${BASE}/auth/login`; },
   logout: () => { window.location.href = `${BASE}/auth/logout`; },
+};
+
+// ─── User ────────────────────────────────────────────────────────────────────
+
+export const user = {
+  updateProfile: (data: { gender: Gender }) =>
+    request<{ success: boolean; gender: Gender }>('/user/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
 };
 
 // ─── Blood Values ─────────────────────────────────────────────────────────────

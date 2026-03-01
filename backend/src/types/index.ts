@@ -1,5 +1,9 @@
 import 'express-session';
 
+// ─── Gender ──────────────────────────────────────────────────────────────────
+
+export type Gender = 'male' | 'female';
+
 // ─── Blood Values ──────────────────────────────────────────────────────────────
 
 export interface BloodValue {
@@ -30,6 +34,7 @@ export interface UserData {
   user_id: string;
   display_name: string;
   email: string;
+  gender?: Gender;
   entries: BloodEntry[];
   api_tokens?: ApiToken[];
 }

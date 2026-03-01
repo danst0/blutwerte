@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { tokens as tokensApi } from '@/lib/api';
-import type { ApiToken, ApiTokenCreated } from '@/types';
+import { tokens as tokensApi, user as userApi } from '@/lib/api';
+import type { ApiToken, ApiTokenCreated, Gender } from '@/types';
 import { Key, Plus, Trash2, Copy, Check, User } from 'lucide-react';
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, refetch } = useAuth();
   const [tokenList, setTokenList] = useState<ApiToken[]>([]);
   const [newTokenName, setNewTokenName] = useState('');
   const [newToken, setNewToken] = useState<ApiTokenCreated | null>(null);
   const [copied, setCopied] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [savingGender, setSavingGender] = useState(false);
 
   useEffect(() => {
     tokensApi.list().then(setTokenList).catch(() => setTokenList([]));
@@ -44,6 +45,18 @@ export default function Profile() {
     }
   }
 
+  async function handleGenderChange(gender: Gender) {
+    setSavingGender(true);
+    try {
+      await userApi.updateProfile({ gender });
+      await refetch();
+    } catch {
+      setError('Fehler beim Speichern des Geschlechts');
+    } finally {
+      setSavingGender(false);
+    }
+  }
+
   async function handleCopy() {
     if (!newToken) return;
     await navigator.clipboard.writeText(newToken.token);
@@ -65,6 +78,33 @@ export default function Profile() {
             <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{user?.displayName}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400">{user?.email}</p>
           </div>
+        </div>
+      </section>
+
+      {/* Gender Selection */}
+      <section className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Geschlecht</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Beeinflusst die Referenzbereiche für geschlechtsspezifische Blutwerte (z.B. Hämoglobin, Hämatokrit, Erythrozyten).
+        </p>
+        <div className="flex gap-3">
+          {([
+            { value: 'male' as Gender, label: 'Männlich' },
+            { value: 'female' as Gender, label: 'Weiblich' },
+          ]).map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => handleGenderChange(value)}
+              disabled={savingGender}
+              className={`flex-1 px-4 py-3 rounded-lg border-2 text-sm font-medium transition-colors ${
+                user?.gender === value
+                  ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                  : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
+              } disabled:opacity-50`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </section>
 

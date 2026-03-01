@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/Badge';
 import { TrafficDot } from '@/components/TrafficLight';
-import { getValueStatus, formatDate, formatNumber, groupByCategory } from '@/lib/utils';
+import { getValueStatus, getEffectiveRange, formatDate, formatNumber, groupByCategory } from '@/lib/utils';
 import type { UserData, BloodEntry, BloodValue, ReferenceValue } from '@/types';
 import {
   PlusCircle,
@@ -116,15 +116,15 @@ export default function Dashboard() {
       .sort((a, b) => {
         // Sort by status severity first
         const statusOrder = { critical_high: 0, critical_low: 0, high: 1, low: 1, warning: 2, unknown: 3, normal: 4 };
-        const sa = getValueStatus(a.latestValue, a.ref);
-        const sb = getValueStatus(b.latestValue, b.ref);
+        const sa = getValueStatus(a.latestValue, a.ref, user?.gender);
+        const sb = getValueStatus(b.latestValue, b.ref, user?.gender);
         return (statusOrder[sa] ?? 4) - (statusOrder[sb] ?? 4);
       });
   })();
 
   const statusCounts = valueSummary.reduce(
     (acc, v) => {
-      const s = getValueStatus(v.latestValue, v.ref);
+      const s = getValueStatus(v.latestValue, v.ref, user?.gender);
       if (s === 'normal') acc.normal++;
       else if (s === 'warning') acc.warning++;
       else if (s === 'unknown') acc.unknown++;
@@ -194,7 +194,7 @@ export default function Dashboard() {
 
           {/* Alerts */}
           {valueSummary.some(v => {
-            const s = getValueStatus(v.latestValue, v.ref);
+            const s = getValueStatus(v.latestValue, v.ref, user?.gender);
             return s === 'critical_high' || s === 'critical_low';
           }) && (
             <div className="flex items-start gap-3 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
@@ -217,7 +217,7 @@ export default function Dashboard() {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {values.map((v) => {
-                  const status = getValueStatus(v.latestValue, v.ref);
+                  const status = getValueStatus(v.latestValue, v.ref, user?.gender);
                   const trend = getTrend(v.history);
                   return (
                     <Link key={v.name} to={`/values/${encodeURIComponent(v.name)}`}>
@@ -254,11 +254,14 @@ export default function Dashboard() {
                           {v.history.length >= 2 && <Sparkline data={v.history} />}
                         </div>
 
-                        {v.ref && (
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                            Ref: {v.ref.ref_min ?? '?'} – {v.ref.ref_max ?? '?'} {v.unit}
-                          </p>
-                        )}
+                        {v.ref && (() => {
+                          const range = getEffectiveRange(v.ref, user?.gender);
+                          return (
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                              Ref: {range.min === -Infinity ? '?' : range.min} – {range.max === Infinity ? '?' : range.max} {v.unit}
+                            </p>
+                          );
+                        })()}
                       </Card>
                     </Link>
                   );
@@ -301,7 +304,7 @@ export default function Dashboard() {
                     {entry.values.slice(0, 4).map((v) => (
                       <TrafficDot
                         key={v.name}
-                        status={getValueStatus(v.value, refDb[v.name])}
+                        status={getValueStatus(v.value, refDb[v.name], user?.gender)}
                         size="sm"
                       />
                     ))}

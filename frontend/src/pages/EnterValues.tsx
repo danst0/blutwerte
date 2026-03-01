@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { bloodValues as bvApi, reference as refApi } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
@@ -21,6 +22,7 @@ interface ValueRow {
 }
 
 export default function EnterValues() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [labName, setLabName] = useState('');
@@ -268,7 +270,7 @@ export default function EnterValues() {
               {rows.map((row) => {
                 const numVal = parseFloat(row.value);
                 const status = !isNaN(numVal) && row.value !== '' && row.ref
-                  ? getValueStatus(numVal, row.ref)
+                  ? getValueStatus(numVal, row.ref, user?.gender)
                   : null;
 
                 return (

@@ -1,16 +1,30 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import type { ReferenceValue, ValueStatus } from '@/types';
+import type { Gender, ReferenceValue, ValueStatus } from '@/types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function getValueStatus(value: number, ref: ReferenceValue | undefined): ValueStatus {
+export function getEffectiveRange(ref: ReferenceValue, gender?: Gender): { min: number; max: number } {
+  let min = ref.ref_min ?? -Infinity;
+  let max = ref.ref_max ?? Infinity;
+
+  if (gender === 'female') {
+    if (ref.ref_min_female !== undefined) min = ref.ref_min_female;
+    if (ref.ref_max_female !== undefined) max = ref.ref_max_female;
+  } else if (gender === 'male') {
+    if (ref.ref_min_male !== undefined) min = ref.ref_min_male;
+    if (ref.ref_max_male !== undefined) max = ref.ref_max_male;
+  }
+
+  return { min, max };
+}
+
+export function getValueStatus(value: number, ref: ReferenceValue | undefined, gender?: Gender): ValueStatus {
   if (!ref) return 'unknown';
 
-  const refMin = ref.ref_min ?? -Infinity;
-  const refMax = ref.ref_max ?? Infinity;
+  const { min: refMin, max: refMax } = getEffectiveRange(ref, gender);
 
   if (ref.critical_low !== undefined && value <= ref.critical_low) return 'critical_low';
   if (ref.critical_high !== undefined && value >= ref.critical_high) return 'critical_high';

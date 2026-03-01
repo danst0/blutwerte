@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { bloodValues as bvApi, reference as refApi } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/Badge';
@@ -18,6 +19,7 @@ import {
 } from 'lucide-react';
 
 export default function AllValues() {
+  const { user } = useAuth();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [refDb, setRefDb] = useState<Record<string, ReferenceValue>>({});
   const [loading, setLoading] = useState(true);
@@ -71,7 +73,7 @@ export default function AllValues() {
     const rows = [['Datum', 'Labor', 'Wert', 'Einheit', 'Kategorie', 'Status']];
     for (const entry of userData.entries) {
       for (const val of entry.values) {
-        const status = getValueStatus(val.value, refDb[val.name]);
+        const status = getValueStatus(val.value, refDb[val.name], user?.gender);
         rows.push([entry.date, entry.lab_name || '', val.name, String(val.value), val.unit, val.category, status]);
       }
     }
@@ -162,7 +164,7 @@ export default function AllValues() {
               ? entry.values.filter((v) => v.category === filterCategory)
               : entry.values;
             const abnormal = filteredValues.filter((v) => {
-              const s = getValueStatus(v.value, refDb[v.name]);
+              const s = getValueStatus(v.value, refDb[v.name], user?.gender);
               return s !== 'normal' && s !== 'unknown';
             });
 
@@ -198,7 +200,7 @@ export default function AllValues() {
                         {filteredValues.slice(0, 6).map((v) => (
                           <TrafficDot
                             key={v.name}
-                            status={getValueStatus(v.value, refDb[v.name])}
+                            status={getValueStatus(v.value, refDb[v.name], user?.gender)}
                             size="sm"
                           />
                         ))}
@@ -234,7 +236,7 @@ export default function AllValues() {
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {filteredValues.map((v) => {
-                        const status = getValueStatus(v.value, refDb[v.name]);
+                        const status = getValueStatus(v.value, refDb[v.name], user?.gender);
                         return (
                           <Link
                             key={v.name}

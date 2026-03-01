@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { bloodValues as bvApi, reference as refApi } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { getValueStatus, formatDate, formatNumber, getTrend } from '@/lib/utils';
+import { getValueStatus, getEffectiveRange, formatDate, formatNumber, getTrend } from '@/lib/utils';
 import type { ReferenceValue, ValueHistoryPoint } from '@/types';
 import { ArrowLeft, TrendingUp, TrendingDown, Minus, Info, BookOpen, Lightbulb } from 'lucide-react';
 import {
@@ -51,6 +52,7 @@ const CustomDot = (props: { cx?: number; cy?: number; payload?: ChartDataPoint }
 };
 
 export default function ValueDetail() {
+  const { user } = useAuth();
   const { name } = useParams<{ name: string }>();
   const valueName = decodeURIComponent(name ?? '');
   const [history, setHistory] = useState<ValueHistoryPoint[]>([]);
@@ -81,22 +83,24 @@ export default function ValueDetail() {
     date: h.date,
     dateLabel: format(parseISO(h.date), 'dd.MM.yyyy'),
     value: h.value,
-    status: getValueStatus(h.value, ref ?? undefined),
+    status: getValueStatus(h.value, ref ?? undefined, user?.gender),
   }));
 
   const latest = history[history.length - 1];
-  const latestStatus = latest ? getValueStatus(latest.value, ref ?? undefined) : 'unknown';
+  const latestStatus = latest ? getValueStatus(latest.value, ref ?? undefined, user?.gender) : 'unknown';
   const trend = getTrend(history);
 
   const unit = latest?.unit ?? ref?.unit ?? '';
+
+  const effectiveRange = ref ? getEffectiveRange(ref, user?.gender) : null;
 
   const yDomain = (() => {
     if (chartData.length === 0) return ['auto', 'auto'] as [string, string];
     const vals = chartData.map((d) => d.value);
     const min = Math.min(...vals);
     const max = Math.max(...vals);
-    const refMin = ref?.ref_min ?? min;
-    const refMax = ref?.ref_max ?? max;
+    const refMin = effectiveRange?.min ?? min;
+    const refMax = effectiveRange?.max ?? max;
     const critLow = ref?.critical_low ?? refMin;
     const critHigh = ref?.critical_high ?? refMax;
     const dataMin = Math.min(min, refMin, critLow);
@@ -241,10 +245,10 @@ export default function ValueDetail() {
                     )}
 
                     {/* Reference range */}
-                    {ref?.ref_min !== undefined && ref?.ref_max !== undefined && (
+                    {effectiveRange && effectiveRange.min !== -Infinity && effectiveRange.max !== Infinity && (
                       <ReferenceArea
-                        y1={ref.ref_min}
-                        y2={ref.ref_max}
+                        y1={effectiveRange.min}
+                        y2={effectiveRange.max}
                         fill="#22c55e"
                         fillOpacity={0.15}
                         label={{ value: 'Referenzbereich', position: 'insideTopRight', fontSize: 10, fill: '#22c55e' }}
@@ -278,11 +282,11 @@ export default function ValueDetail() {
             <Card>
               <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">Referenzbereiche</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                {ref.ref_min !== undefined && ref.ref_max !== undefined && (
+                {effectiveRange && effectiveRange.min !== -Infinity && effectiveRange.max !== Infinity && (
                   <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
                     <p className="text-xs text-green-600 dark:text-green-400 font-medium">Referenzbereich</p>
                     <p className="font-semibold text-gray-900 dark:text-gray-100 mt-1">
-                      {ref.ref_min} – {ref.ref_max} {unit}
+                      {effectiveRange.min} – {effectiveRange.max} {unit}
                     </p>
                   </div>
                 )}
@@ -326,7 +330,7 @@ export default function ValueDetail() {
                 </thead>
                 <tbody>
                   {[...filteredHistory].reverse().map((h) => {
-                    const status = getValueStatus(h.value, ref ?? undefined);
+                    const status = getValueStatus(h.value, ref ?? undefined, user?.gender);
                     return (
                       <tr key={`${h.date}-${h.entryId}`} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                         <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{formatDate(h.date)}</td>

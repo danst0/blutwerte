@@ -1,11 +1,12 @@
 import React from 'react';
 import { cn, getValueStatus, getStatusLabel } from '@/lib/utils';
-import type { ReferenceValue, ValueStatus } from '@/types';
+import type { Gender, ReferenceValue, ValueStatus } from '@/types';
 
 interface TrafficLightProps {
   value: number;
   unit: string;
   ref?: ReferenceValue;
+  gender?: Gender;
   size?: 'sm' | 'md' | 'lg';
   showLabel?: boolean;
 }
@@ -26,8 +27,8 @@ const dotSizes = {
   lg: 'w-5 h-5',
 };
 
-export function TrafficLight({ value, unit, ref: refValue, size = 'md', showLabel = false }: TrafficLightProps) {
-  const status = getValueStatus(value, refValue);
+export function TrafficLight({ value, unit, ref: refValue, gender, size = 'md', showLabel = false }: TrafficLightProps) {
+  const status = getValueStatus(value, refValue, gender);
 
   return (
     <div className="flex items-center gap-2">

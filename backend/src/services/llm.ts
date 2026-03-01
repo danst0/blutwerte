@@ -1,5 +1,5 @@
 import { getConfig } from '../config';
-import type { LLMMessage, LLMResponse, UserData, ReferenceValue } from '../types';
+import type { Gender, LLMMessage, LLMResponse, UserData, ReferenceValue } from '../types';
 import { findReferenceValue } from './fileStore';
 
 const SYSTEM_PROMPT = `Du bist ein hilfreicher medizinischer Assistent, der Blutwerte erklärt und einordnet.
@@ -10,17 +10,35 @@ Wenn Werte kritisch außerhalb des Referenzbereichs liegen, empfiehl dringend ei
 Beziehe dich auf die konkreten Werte des Nutzers, wenn relevant.
 Formatiere deine Antworten übersichtlich mit Markdown.`;
 
+function getEffectiveRange(ref: ReferenceValue, gender?: Gender): { min: number; max: number } {
+  let min = ref.ref_min ?? -Infinity;
+  let max = ref.ref_max ?? Infinity;
+
+  if (gender === 'female') {
+    if (ref.ref_min_female !== undefined) min = ref.ref_min_female;
+    if (ref.ref_max_female !== undefined) max = ref.ref_max_female;
+  } else if (gender === 'male') {
+    if (ref.ref_min_male !== undefined) min = ref.ref_min_male;
+    if (ref.ref_max_male !== undefined) max = ref.ref_max_male;
+  }
+
+  return { min, max };
+}
+
 function buildUserContext(userData: UserData): string {
   if (userData.entries.length === 0) {
     return 'Der Nutzer hat noch keine Blutwerte eingetragen.';
   }
 
+  const gender = userData.gender;
   const recent = userData.entries
     .slice()
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 5);
 
-  let context = `Blutwerte von ${userData.display_name}:\n\n`;
+  let context = `Blutwerte von ${userData.display_name}`;
+  if (gender) context += ` (${gender === 'male' ? 'männlich' : 'weiblich'})`;
+  context += `:\n\n`;
 
   for (const entry of recent) {
     context += `**Eintrag vom ${entry.date}`;
@@ -31,13 +49,14 @@ function buildUserContext(userData: UserData): string {
       const ref = findReferenceValue(val.name);
       let status = '';
       if (ref) {
-        const refMin = ref.ref_min ?? -Infinity;
-        const refMax = ref.ref_max ?? Infinity;
+        const { min: refMin, max: refMax } = getEffectiveRange(ref, gender);
         if (val.value < refMin) status = ' ⬇ UNTER Referenzbereich';
         else if (val.value > refMax) status = ' ⬆ ÜBER Referenzbereich';
         else status = ' ✓ Normal';
         if (ref.critical_low !== undefined && val.value <= ref.critical_low) status = ' 🚨 KRITISCH NIEDRIG';
         if (ref.critical_high !== undefined && val.value >= ref.critical_high) status = ' 🚨 KRITISCH HOCH';
+        const rangeStr = refMin !== -Infinity && refMax !== Infinity ? ` [Ref: ${refMin}–${refMax}]` : '';
+        status += rangeStr;
       }
       context += `- ${val.name}: ${val.value} ${val.unit}${status}\n`;
     }

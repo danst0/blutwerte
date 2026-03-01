@@ -1,6 +1,6 @@
 {
-  "version": "2.1.0",
-  "updated": "2026-02-28",
+  "version": "2.2.0",
+  "updated": "2026-03-01",
   "values": [
     {
       "id": "haemoglobin",
@@ -977,11 +977,11 @@
         "Calcium"
       ],
       "category": "Vitamine & Mineralstoffe",
-      "unit": "mg/dL",
-      "ref_min": 8.5,
-      "ref_max": 10.5,
-      "critical_low": 6.0,
-      "critical_high": 13.0,
+      "unit": "mmol/L",
+      "ref_min": 2.15,
+      "ref_max": 2.55,
+      "critical_low": 1.5,
+      "critical_high": 3.5,
       "description": "Kalzium ist der mengenmäßig bedeutendste Mineralstoff des Körpers. 99% sind in Knochen und Zähnen gespeichert. Es reguliert Muskelkontraktionen, Nervenimpulse, Blutgerinnung und Hormonsekretionen.",
       "high_info": "Erhöhtes Kalzium (Hyperkalzämie) entsteht durch Hyperparathyreoidismus, Tumoren, Vitamin-D-Überdosierung, Sarkoidose. Symptome: Übelkeit, Verstopfung, Verwirrtheit, Nierensteine.",
       "low_info": "Erniedrigtes Kalzium (Hypokalzämie) entsteht bei Hypoparathyreoidismus, Vitamin-D-Mangel, Niereninsuffizienz. Symptome: Muskelkrämpfe, Kribbeln, Tetanie.",

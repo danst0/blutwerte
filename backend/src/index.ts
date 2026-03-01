@@ -12,6 +12,7 @@ import { referenceRouter } from './routes/reference';
 import { aiRouter } from './routes/ai';
 import { tokensRouter } from './routes/tokens';
 import { adminReferenceRouter } from './routes/adminReference';
+import { userRouter } from './routes/user';
 
 const FileStore = FileStoreFactory(session);
 const config = getConfig();
@@ -90,6 +91,7 @@ app.use('/api/reference', referenceRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/tokens', tokensRouter);
 app.use('/api/admin/reference', adminReferenceRouter);
+app.use('/api/user', userRouter);
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 
