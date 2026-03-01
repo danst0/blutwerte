@@ -52,11 +52,11 @@ COPY --from=backend-deps --chown=appuser:appuser /app/backend/node_modules ./bac
 COPY --from=frontend-builder --chown=appuser:appuser /app/frontend/dist ./frontend/dist
 
 # Create data directories with correct permissions
-RUN mkdir -p /app/data/users /app/data/sessions && \
-    chown -R appuser:appuser /app/data
+RUN mkdir -p /app/data/users /app/data/sessions /app/defaults && \
+    chown -R appuser:appuser /app/data /app/defaults
 
-# Copy reference values (fallback if not mounted via volume)
-COPY --chown=appuser:appuser data/reference_values.json /app/data/reference_values.json
+# Bake reference values into image (not in data dir — data dir is for overrides only)
+COPY --chown=appuser:appuser data/reference_values.json /app/defaults/reference_values.json
 
 WORKDIR /app/backend
 

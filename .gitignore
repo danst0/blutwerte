@@ -5,6 +5,7 @@ dist/
 data/users/
 data/sessions/
 data/ai_rate_limits.json
+data/reference_overrides.json
 *.log
 .DS_Store
 Thumbs.db

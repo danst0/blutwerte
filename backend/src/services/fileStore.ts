@@ -110,24 +110,59 @@ export function appendChatMessage(userId: string, message: ChatMessage): void {
 
 let _referenceCache: ReferenceDatabase | null = null;
 
+const EMPTY_DB: ReferenceDatabase = { version: '1.0', updated: '', values: [] };
+
+/**
+ * Load the built-in reference values baked into the Docker image.
+ * Falls back to ../data/reference_values.json for local development.
+ */
+function getBuiltinReferenceDatabase(): ReferenceDatabase {
+  // Docker image path
+  const imagePath = path.resolve('/app/defaults/reference_values.json');
+  if (fs.existsSync(imagePath)) {
+    return readJSON<ReferenceDatabase>(imagePath, EMPTY_DB);
+  }
+  // Dev fallback: relative to backend cwd
+  const devPath = path.join(process.cwd(), '..', 'data', 'reference_values.json');
+  if (fs.existsSync(devPath)) {
+    return readJSON<ReferenceDatabase>(devPath, EMPTY_DB);
+  }
+  console.warn('Built-in reference_values.json not found');
+  return EMPTY_DB;
+}
+
+/**
+ * Load user overrides from the data directory.
+ */
+function getOverrides(): ReferenceDatabase | null {
+  const config = getConfig();
+  const filePath = path.join(config.DATA_DIR, 'reference_overrides.json');
+  if (!fs.existsSync(filePath)) return null;
+  return readJSON<ReferenceDatabase | null>(filePath, null);
+}
+
+/**
+ * Merge built-in values with overrides. Override values replace built-in by id;
+ * new values are appended.
+ */
+function mergeReferences(builtin: ReferenceDatabase, overrides: ReferenceDatabase): ReferenceDatabase {
+  const merged = new Map<string, ReferenceValue>();
+  for (const v of builtin.values) merged.set(v.id, v);
+  for (const v of overrides.values) merged.set(v.id, v);
+
+  return {
+    version: builtin.version,
+    updated: overrides.updated || builtin.updated,
+    values: Array.from(merged.values()),
+  };
+}
+
 export function getReferenceDatabase(): ReferenceDatabase {
   if (_referenceCache) return _referenceCache;
 
-  const config = getConfig();
-  const filePath = path.join(config.DATA_DIR, 'reference_values.json');
-
-  if (!fs.existsSync(filePath)) {
-    // Try relative to cwd
-    const altPath = path.join(process.cwd(), '..', 'data', 'reference_values.json');
-    if (fs.existsSync(altPath)) {
-      _referenceCache = readJSON<ReferenceDatabase>(altPath, { version: '1.0', updated: '', values: [] });
-    } else {
-      console.warn('reference_values.json not found at', filePath);
-      _referenceCache = { version: '1.0', updated: '', values: [] };
-    }
-  } else {
-    _referenceCache = readJSON<ReferenceDatabase>(filePath, { version: '1.0', updated: '', values: [] });
-  }
+  const builtin = getBuiltinReferenceDatabase();
+  const overrides = getOverrides();
+  _referenceCache = overrides ? mergeReferences(builtin, overrides) : builtin;
 
   return _referenceCache;
 }
@@ -142,10 +177,35 @@ export function findReferenceValue(name: string): ReferenceValue | undefined {
   );
 }
 
+/**
+ * Save the full merged database. Computes diff against built-in and persists
+ * only the values that differ (overrides) in reference_overrides.json.
+ */
 export function saveReferenceDatabase(db: ReferenceDatabase): void {
   const config = getConfig();
-  const filePath = path.join(config.DATA_DIR, 'reference_values.json');
-  writeJSON(filePath, db);
+  const builtin = getBuiltinReferenceDatabase();
+  const builtinMap = new Map(builtin.values.map((v) => [v.id, v]));
+
+  // Keep only values that differ from built-in or are new
+  const overrideValues = db.values.filter((v) => {
+    const b = builtinMap.get(v.id);
+    return !b || JSON.stringify(b) !== JSON.stringify(v);
+  });
+
+  if (overrideValues.length > 0) {
+    const overridesDb: ReferenceDatabase = {
+      version: 'overrides',
+      updated: new Date().toISOString().split('T')[0],
+      values: overrideValues,
+    };
+    const filePath = path.join(config.DATA_DIR, 'reference_overrides.json');
+    writeJSON(filePath, overridesDb);
+  } else {
+    // No overrides needed — remove file if it exists
+    const filePath = path.join(config.DATA_DIR, 'reference_overrides.json');
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  }
+
   _referenceCache = db;
 }
 
