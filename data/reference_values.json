@@ -683,8 +683,7 @@
         "HbA1c",
         "Glykohämoglobin",
         "Langzeitblutzucker",
-        "HbA1c (HPLC)",
-        "HbA1c (IFCC)"
+        "HbA1c (HPLC)"
       ],
       "category": "Stoffwechsel",
       "unit": "%",
