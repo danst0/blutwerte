@@ -9,6 +9,7 @@ import {
 } from '../auth/oidc';
 import { ensureUserProfile, getUserData } from '../services/fileStore';
 import { asyncHandler, isAdminUser } from '../middleware/requireAuth';
+import { findUserByToken } from '../services/fileStore';
 
 export const authRouter = Router();
 
@@ -123,18 +124,35 @@ authRouter.get(
   })
 );
 
-// GET /api/auth/me – current user info
+// GET /api/auth/me – current user info (supports session + Bearer token)
 authRouter.get('/me', (req, res) => {
-  if (!req.session?.userId) {
+  let userId = req.session?.userId;
+  let displayName = req.session?.displayName;
+  let email = req.session?.email;
+
+  // Fall back to Bearer token if no session
+  if (!userId) {
+    const authHeader = req.headers['authorization'];
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.slice(7);
+      const tokenUserId = findUserByToken(token);
+      if (tokenUserId) {
+        userId = tokenUserId;
+      }
+    }
+  }
+
+  if (!userId) {
     return res.status(401).json({ authenticated: false });
   }
-  const isAdmin = isAdminUser(req.session.userId, req.session.email);
-  const userData = getUserData(req.session.userId);
+
+  const isAdmin = isAdminUser(userId, email);
+  const userData = getUserData(userId);
   res.json({
     authenticated: true,
-    userId: req.session.userId,
-    displayName: req.session.displayName,
-    email: req.session.email,
+    userId,
+    displayName: displayName ?? userData.display_name,
+    email: email ?? userData.email,
     isAdmin,
     gender: userData.gender,
     diagnoses: userData.diagnoses,

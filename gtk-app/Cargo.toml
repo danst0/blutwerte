@@ -1,0 +1,25 @@
+[package]
+name = "blutwerte-gtk"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "blutwerte-gtk"
+path = "src/main.rs"
+
+[dependencies]
+gtk4          = { version = "0.9", features = ["v4_14"] }
+libadwaita    = { version = "0.7", features = ["v1_6"] }
+glib          = "0.20"
+cairo-rs      = { version = "0.20", features = ["use_glib"] }
+
+tokio         = { version = "1", features = ["full"] }
+reqwest       = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+serde         = { version = "1", features = ["derive"] }
+serde_json    = "1"
+toml          = "0.8"
+dirs          = "5"
+anyhow        = "1"
+chrono        = { version = "0.4", features = ["serde"] }
+urlencoding   = "2"
+async-channel = "2"
