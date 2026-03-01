@@ -25,6 +25,9 @@ const configSchema = z.object({
   DATA_DIR: z.string().default('/app/data'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 
+  // Admin
+  ADMIN_USER_IDS: z.string().default(''),
+
   // Dev mode: auto-login without OIDC
   DEV_AUTO_LOGIN: z.coerce.boolean().default(false),
   TRUST_PROXY: z.coerce.number().default(0),

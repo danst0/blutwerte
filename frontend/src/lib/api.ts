@@ -84,6 +84,27 @@ export const tokens = {
     request<{ success: boolean }>(`/tokens/${id}`, { method: 'DELETE' }),
 };
 
+// ─── Admin Reference ──────────────────────────────────────────────────────────
+
+export const adminReference = {
+  getAll: () => request<ReferenceDatabase>('/admin/reference'),
+
+  create: (value: Omit<ReferenceValue, 'id'>) =>
+    request<ReferenceValue>('/admin/reference', {
+      method: 'POST',
+      body: JSON.stringify(value),
+    }),
+
+  update: (id: string, value: ReferenceValue) =>
+    request<ReferenceValue>(`/admin/reference/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(value),
+    }),
+
+  delete: (id: string) =>
+    request<{ success: boolean }>(`/admin/reference/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+};
+
 // ─── AI ───────────────────────────────────────────────────────────────────────
 
 export const ai = {

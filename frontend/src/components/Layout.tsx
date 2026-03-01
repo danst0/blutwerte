@@ -15,14 +15,19 @@ import {
   X,
   Droplets,
   User,
+  Database,
 } from 'lucide-react';
 
-const navItems = [
+const baseNavItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/enter', label: 'Werte eintragen', icon: PlusCircle },
   { to: '/values', label: 'Alle Werte', icon: TableProperties },
   { to: '/ai', label: 'KI-Doktor', icon: MessageSquareHeart },
   { to: '/profile', label: 'Profil', icon: User },
+];
+
+const adminNavItems = [
+  { to: '/admin/reference', label: 'Stammdaten', icon: Database },
 ];
 
 function useTheme() {
@@ -78,7 +83,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {navItems.map(({ to, label, icon: Icon }) => {
+          {[...baseNavItems, ...(user?.isAdmin ? adminNavItems : [])].map(({ to, label, icon: Icon }) => {
             const active = location.pathname === to || (to !== '/dashboard' && location.pathname.startsWith(to));
             return (
               <Link

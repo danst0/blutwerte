@@ -8,7 +8,7 @@ import {
   getLogoutUrl,
 } from '../auth/oidc';
 import { ensureUserProfile } from '../services/fileStore';
-import { asyncHandler } from '../middleware/requireAuth';
+import { asyncHandler, isAdminUser } from '../middleware/requireAuth';
 
 export const authRouter = Router();
 
@@ -128,10 +128,12 @@ authRouter.get('/me', (req, res) => {
   if (!req.session?.userId) {
     return res.status(401).json({ authenticated: false });
   }
+  const isAdmin = isAdminUser(req.session.userId, req.session.email);
   res.json({
     authenticated: true,
     userId: req.session.userId,
     displayName: req.session.displayName,
     email: req.session.email,
+    isAdmin,
   });
 });

@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { findUserByToken } from '../services/fileStore';
+import { getConfig } from '../config';
 
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   // Session-based auth
@@ -21,6 +22,28 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   }
 
   res.status(401).json({ error: 'Unauthorized', message: 'Nicht authentifiziert' });
+}
+
+export function isAdminUser(userId: string | undefined, email: string | undefined): boolean {
+  if (!userId) return false;
+  const config = getConfig();
+  const adminIds = config.ADMIN_USER_IDS.split(',').map((id) => id.trim()).filter(Boolean);
+  return adminIds.includes(userId) || (!!email && adminIds.includes(email));
+}
+
+export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
+  const userId = req.session?.userId;
+  if (!userId) {
+    res.status(401).json({ error: 'Unauthorized', message: 'Nicht authentifiziert' });
+    return;
+  }
+
+  if (!isAdminUser(userId, req.session?.email)) {
+    res.status(403).json({ error: 'Forbidden', message: 'Keine Administratorrechte' });
+    return;
+  }
+
+  next();
 }
 
 export function asyncHandler<T>(

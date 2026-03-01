@@ -142,6 +142,17 @@ export function findReferenceValue(name: string): ReferenceValue | undefined {
   );
 }
 
+export function saveReferenceDatabase(db: ReferenceDatabase): void {
+  const config = getConfig();
+  const filePath = path.join(config.DATA_DIR, 'reference_values.json');
+  writeJSON(filePath, db);
+  _referenceCache = db;
+}
+
+export function updateReferenceVersion(db: ReferenceDatabase): ReferenceDatabase {
+  return { ...db, updated: new Date().toISOString().split('T')[0] };
+}
+
 export function searchReferenceValues(query: string): ReferenceValue[] {
   const db = getReferenceDatabase();
   const lower = query.toLowerCase();
