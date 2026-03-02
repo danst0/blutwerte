@@ -70,6 +70,7 @@ export default function Dashboard() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [refDb, setRefDb] = useState<Record<string, ReferenceValue>>({});
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<'normal' | 'warning' | 'abnormal' | null>(null);
 
   useEffect(() => {
     Promise.all([bvApi.getAll(), refApi.getAll()]).then(([data, refs]) => {
@@ -134,7 +135,17 @@ export default function Dashboard() {
     { normal: 0, warning: 0, abnormal: 0, unknown: 0 }
   );
 
-  const categoryGroups = groupByCategory(valueSummary);
+  const filteredSummary = statusFilter === null
+    ? valueSummary
+    : valueSummary.filter(v => {
+        const s = getValueStatus(v.latestValue, v.ref, user?.gender);
+        if (statusFilter === 'normal') return s === 'normal';
+        if (statusFilter === 'warning') return s === 'warning';
+        if (statusFilter === 'abnormal') return s !== 'normal' && s !== 'warning' && s !== 'unknown';
+        return true;
+      });
+
+  const categoryGroups = groupByCategory(filteredSummary);
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -179,16 +190,20 @@ export default function Dashboard() {
         <>
           {/* Summary stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { label: 'Im Normalbereich', count: statusCounts.normal, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20' },
-              { label: 'Grenzwertig', count: statusCounts.warning, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20' },
-              { label: 'Auffällig', count: statusCounts.abnormal, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20' },
-              { label: 'Gesamt Werte', count: valueSummary.length, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20' },
-            ].map(({ label, count, color, bg }) => (
-              <Card key={label} className={`${bg} border-0`}>
+            {([
+              { label: 'Im Normalbereich', count: statusCounts.normal, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20', ring: 'ring-green-500', filterKey: 'normal' as const },
+              { label: 'Grenzwertig', count: statusCounts.warning, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20', ring: 'ring-amber-500', filterKey: 'warning' as const },
+              { label: 'Auffällig', count: statusCounts.abnormal, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20', ring: 'ring-red-500', filterKey: 'abnormal' as const },
+              { label: 'Gesamt Werte', count: valueSummary.length, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20', ring: 'ring-blue-500', filterKey: null },
+            ] as const).map(({ label, count, color, bg, ring, filterKey }) => (
+              <button
+                key={label}
+                onClick={() => setStatusFilter(prev => prev === filterKey ? null : filterKey)}
+                className={`text-left w-full rounded-xl p-4 ${bg} border-0 transition-shadow ${statusFilter === filterKey ? `ring-2 ring-offset-1 ${ring}` : 'hover:shadow-md'}`}
+              >
                 <p className={`text-3xl font-bold ${color}`}>{count}</p>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{label}</p>
-              </Card>
+              </button>
             ))}
           </div>
 
@@ -209,6 +224,11 @@ export default function Dashboard() {
           )}
 
           {/* Values by category */}
+          {filteredSummary.length === 0 && statusFilter !== null && (
+            <p className="text-center text-gray-400 dark:text-gray-500 py-8">
+              Keine Werte in dieser Kategorie.
+            </p>
+          )}
           {Object.entries(categoryGroups).map(([category, values]) => (
             <div key={category}>
               <h2 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
