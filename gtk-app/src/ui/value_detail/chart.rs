@@ -33,7 +33,9 @@ pub fn build_chart(
         return;
     }
 
-    // Compute Y domain
+    // Compute Y domain based on data + reference range only.
+    // Critical lines are drawn as overlays but do NOT stretch the domain,
+    // otherwise data points and reference lines become visually indistinguishable.
     let values: Vec<f64> = history.iter().map(|h| h.value).collect();
     let data_min = values.iter().cloned().fold(f64::INFINITY, f64::min);
     let data_max = values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
@@ -42,23 +44,15 @@ pub fn build_chart(
         .map(|r| get_effective_range(r, gender))
         .unwrap_or((None, None));
 
-    let y_min_raw = [
-        data_min,
-        ref_min.unwrap_or(data_min),
-        ref_val.and_then(|r| r.critical_low).unwrap_or(data_min),
-    ]
-    .iter()
-    .cloned()
-    .fold(f64::INFINITY, f64::min);
+    let y_min_raw = [data_min, ref_min.unwrap_or(data_min)]
+        .iter()
+        .cloned()
+        .fold(f64::INFINITY, f64::min);
 
-    let y_max_raw = [
-        data_max,
-        ref_max.unwrap_or(data_max),
-        ref_val.and_then(|r| r.critical_high).unwrap_or(data_max),
-    ]
-    .iter()
-    .cloned()
-    .fold(f64::NEG_INFINITY, f64::max);
+    let y_max_raw = [data_max, ref_max.unwrap_or(data_max)]
+        .iter()
+        .cloned()
+        .fold(f64::NEG_INFINITY, f64::max);
 
     let pad = (y_max_raw - y_min_raw) * 0.15;
     let pad = if pad < 0.001 { 1.0 } else { pad };

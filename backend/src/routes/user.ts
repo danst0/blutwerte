@@ -10,7 +10,7 @@ const lifestyleSchema = z.object({
   alcohol: z.enum(['never', 'rarely', 'moderate', 'regular']).optional(),
   exercise: z.enum(['none', 'light', 'moderate', 'active', 'very_active']).optional(),
   diet: z.enum(['mixed', 'vegetarian', 'vegan', 'pescatarian', 'keto', 'other']).optional(),
-  sleep_hours: z.number().min(4).max(12).optional(),
+  sleep_hours: z.number().min(0).max(24).optional(),
   stress_level: z.enum(['low', 'moderate', 'high', 'very_high']).optional(),
 }).optional();
 

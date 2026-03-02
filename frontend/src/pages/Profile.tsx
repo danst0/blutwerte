@@ -161,6 +161,8 @@ export default function Profile() {
   const [diagnoses, setDiagnoses] = useState<string[]>([]);
   const [medications, setMedications] = useState<string[]>([]);
   const [lifestyle, setLifestyle] = useState<Lifestyle>({});
+  const [sleepHoursRaw, setSleepHoursRaw] = useState('');
+  const [sleepHoursError, setSleepHoursError] = useState<string | null>(null);
 
   // Sync from user data
   useEffect(() => {
@@ -168,6 +170,7 @@ export default function Profile() {
       setDiagnoses(user.diagnoses ?? []);
       setMedications(user.medications ?? []);
       setLifestyle(user.lifestyle ?? {});
+      setSleepHoursRaw(user.lifestyle?.sleep_hours?.toString() ?? '');
     }
   }, [user]);
 
@@ -390,18 +393,37 @@ export default function Profile() {
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Schlaf (Std/Nacht)</label>
             <input
               type="number"
-              min={4}
-              max={12}
+              min={0}
+              max={24}
               step={0.5}
-              value={lifestyle.sleep_hours ?? ''}
+              value={sleepHoursRaw}
               onChange={(e) => {
-                const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                const raw = e.target.value;
+                setSleepHoursRaw(raw);
+                const val = raw ? parseFloat(raw) : undefined;
+                if (val !== undefined && (val < 0 || val > 24)) {
+                  setSleepHoursError('Bitte einen Wert zwischen 0 und 24 eingeben.');
+                } else {
+                  setSleepHoursError(null);
+                }
+              }}
+              onBlur={() => {
+                const val = sleepHoursRaw ? parseFloat(sleepHoursRaw) : undefined;
+                if (val !== undefined && (val < 0 || val > 24)) return;
+                setSleepHoursError(null);
                 handleLifestyleChange({ ...lifestyle, sleep_hours: val });
               }}
               placeholder="z.B. 7.5"
               disabled={savingLifestyle}
-              className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+              className={`w-full text-sm rounded-lg border px-3 py-2.5 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 disabled:opacity-50 bg-white dark:bg-gray-800 ${
+                sleepHoursError
+                  ? 'border-red-400 dark:border-red-500 focus:ring-red-500'
+                  : 'border-gray-200 dark:border-gray-700 focus:ring-blue-500'
+              }`}
             />
+            {sleepHoursError && (
+              <p className="text-xs text-red-600 dark:text-red-400">{sleepHoursError}</p>
+            )}
           </div>
         </div>
       </section>

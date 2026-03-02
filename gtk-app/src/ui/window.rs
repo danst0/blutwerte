@@ -48,8 +48,15 @@ pub fn build_ui(app: &adw::Application, config: Config) {
     settings_btn.set_margin_bottom(8);
     settings_btn.set_margin_top(4);
 
+    let version_label = gtk4::Label::new(Some(&format!("v{}", env!("CARGO_PKG_VERSION"))));
+    version_label.add_css_class("caption");
+    version_label.add_css_class("dim-label");
+    version_label.set_halign(gtk4::Align::Center);
+    version_label.set_margin_bottom(4);
+
     sidebar_box.append(&list_box);
     sidebar_box.append(&settings_btn);
+    sidebar_box.append(&version_label);
     sidebar_toolbar.set_content(Some(&sidebar_box));
     sidebar_page.set_child(Some(&sidebar_toolbar));
     split_view.set_sidebar(Some(&sidebar_page));

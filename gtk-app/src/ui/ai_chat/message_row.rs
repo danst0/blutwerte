@@ -71,10 +71,10 @@ pub fn build_message_row(msg: &ChatMessage) -> gtk4::Box {
 }
 
 fn format_time(timestamp: &str) -> String {
-    // Parse ISO 8601 and format as HH:MM
-    if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(timestamp) {
-        use chrono::Timelike;
-        format!("{:02}:{:02}", dt.hour(), dt.minute())
+    use chrono::{DateTime, Local, Timelike};
+    if let Ok(dt) = DateTime::parse_from_rfc3339(timestamp) {
+        let local: DateTime<Local> = dt.into();
+        format!("{:02}:{:02}", local.hour(), local.minute())
     } else {
         timestamp.to_string()
     }

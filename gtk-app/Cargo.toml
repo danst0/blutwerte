@@ -1,6 +1,6 @@
 [package]
 name = "blutwerte-gtk"
-version = "0.1.0"
+version = "1.1.9"
 edition = "2021"
 
 [[bin]]
