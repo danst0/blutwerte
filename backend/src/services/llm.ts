@@ -106,6 +106,56 @@ function buildUserContext(userData: UserData): string {
 
 // ─── Gemini ───────────────────────────────────────────────────────────────────
 
+const GEMINI_DEFAULT_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+
+// Keys aus .env-Dateien tragen oft Anführungszeichen oder Zeilenumbrüche mit sich,
+// die Google unverändert als ungültigen Key ablehnt.
+function normalizeApiKey(apiKey: string): string {
+  return apiKey.trim().replace(/^['"]|['"]$/g, '');
+}
+
+function geminiFetch(model: string, apiKey: string, baseUrl: string | undefined, body: unknown) {
+  const base = (baseUrl || GEMINI_DEFAULT_BASE).replace(/\/$/, '');
+  return fetch(`${base}/models/${model}:generateContent`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+async function geminiError(response: Response): Promise<Error> {
+  const raw = await response.text();
+  let message = '';
+  let reason = '';
+  try {
+    const parsed = JSON.parse(raw) as {
+      error?: { message?: string; details?: Array<{ reason?: string }> };
+    };
+    message = parsed.error?.message ?? '';
+    reason = parsed.error?.details?.find((d) => d.reason)?.reason ?? '';
+  } catch {
+    // Antwort war kein JSON – Rohtext verwenden
+  }
+
+  if (reason === 'API_KEY_INVALID' || /api key not valid/i.test(message)) {
+    return new Error(
+      'Der hinterlegte Gemini-API-Key ist ungültig. Bitte LLM_API_KEY in der Server-Konfiguration prüfen (Google AI Studio → API Key).'
+    );
+  }
+  if (response.status === 403) {
+    return new Error(
+      'Der Gemini-API-Key hat keinen Zugriff auf die Generative Language API. Bitte die Berechtigungen des Keys prüfen.'
+    );
+  }
+  if (response.status === 429) {
+    return new Error('Das Gemini-Kontingent ist derzeit erschöpft. Bitte später erneut versuchen.');
+  }
+  return new Error(`Gemini API error ${response.status}: ${message || raw}`);
+}
+
 async function callGemini(
   messages: LLMMessage[],
   systemPrompt: string,
@@ -113,8 +163,8 @@ async function callGemini(
   apiKey: string,
   baseUrl?: string
 ): Promise<string> {
-  const base = (baseUrl || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/$/, '');
-  const url = `${base}/models/${model}:generateContent?key=${apiKey}`;
+  const key = normalizeApiKey(apiKey);
+  if (!key) throw new Error('LLM_API_KEY ist nicht konfiguriert.');
 
   const contents = messages.map((m) => ({
     role: m.role === 'assistant' ? 'model' : 'user',
@@ -130,15 +180,10 @@ async function callGemini(
     },
   };
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  const response = await geminiFetch(model, key, baseUrl, body);
 
   if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Gemini API error ${response.status}: ${err}`);
+    throw await geminiError(response);
   }
 
   const data = await response.json() as {
@@ -416,12 +461,10 @@ export async function analyzeBloodTestImage(
     throw new Error('Scan-Import ist nur mit dem Gemini-Provider verfügbar.');
   }
 
-  const apiKey = config.LLM_API_KEY;
+  const apiKey = normalizeApiKey(config.LLM_API_KEY || '');
   if (!apiKey) throw new Error('LLM_API_KEY ist nicht konfiguriert.');
 
-  const base = (config.LLM_API_URL || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/$/, '');
   const model = config.LLM_MODEL || 'gemini-2.5-flash';
-  const url = `${base}/models/${model}:generateContent?key=${apiKey}`;
 
   const base64Data = imageBuffer.toString('base64');
 
@@ -441,15 +484,10 @@ export async function analyzeBloodTestImage(
     },
   };
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  const response = await geminiFetch(model, apiKey, config.LLM_API_URL, body);
 
   if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Gemini API error ${response.status}: ${err}`);
+    throw await geminiError(response);
   }
 
   const data = await response.json() as {
