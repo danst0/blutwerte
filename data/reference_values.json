@@ -1,6 +1,6 @@
 {
-  "version": "2.2.0",
-  "updated": "2026-03-01",
+  "version": "2.3.0",
+  "updated": "2026-09-10",
   "values": [
     {
       "id": "haemoglobin",
@@ -185,7 +185,9 @@
         "BKS",
         "Blutsenkung",
         "ESR",
-        "Erythrocyte Sedimentation Rate"
+        "Erythrocyte Sedimentation Rate",
+        "BSG 1. Stunde",
+        "BSG (1. Wert)"
       ],
       "category": "Blutbild",
       "unit": "mm/h",
@@ -197,6 +199,28 @@
       "high_info": "Erhöhte Werte weisen auf Entzündungen, Infektionen, Autoimmunerkrankungen, Tumorerkrankungen, Anämien oder Nierenerkrankungen hin.",
       "low_info": "Sehr niedrige Werte sind meist ohne klinische Bedeutung, können aber bei Polyglobulie vorkommen.",
       "recommendations": "Bei dauerhaft erhöhter BSG ärztliche Abklärung der Grundursache."
+    },
+    {
+      "id": "bsg_2",
+      "name": "BSG 2. Wert",
+      "short_name": "BSG 2h",
+      "long_name": "Blutkörperchensenkungsgeschwindigkeit (2. Stunde)",
+      "aliases": [
+        "BSG 2. Stunde",
+        "BKS 2. Stunde",
+        "BSG (2. Wert)",
+        "Blutsenkung 2. Stunde"
+      ],
+      "category": "Blutbild",
+      "unit": "mm/2h",
+      "ref_min": 5.0,
+      "ref_max": 40.0,
+      "ref_max_female": 40.0,
+      "ref_max_male": 30.0,
+      "description": "Zweiter Ablesewert der Blutkörperchensenkung nach zwei Stunden. Er wird zusammen mit dem 1-Stunden-Wert angegeben (Schreibweise \"6/12\") und liegt naturgemäß höher als dieser.",
+      "high_info": "Wie beim 1-Stunden-Wert sprechen erhöhte Werte für Entzündungen, Infektionen, Autoimmunerkrankungen, Tumorerkrankungen oder Anämien. Aussagekräftig ist vor allem der 1-Stunden-Wert.",
+      "low_info": "Niedrige Werte sind in der Regel ohne Krankheitswert.",
+      "recommendations": "Bei dauerhaft erhöhten Senkungswerten ärztliche Abklärung der Grundursache."
     },
     {
       "id": "neutrophile",
@@ -595,6 +619,27 @@
       "recommendations": "Gesättigte Fette und Transfette reduzieren, mehr Ballaststoffe (Hafer, Flohsamen), körperliche Aktivität, Normalgewicht, ggf. Statine nach ärztlicher Absprache."
     },
     {
+      "id": "non_hdl_cholesterin",
+      "name": "Non-HDL-Cholesterin",
+      "short_name": "Non-HDL",
+      "long_name": "Non-HDL-Cholesterin",
+      "aliases": [
+        "Non-HDL",
+        "Nicht-HDL-Cholesterin",
+        "Non HDL Cholesterin",
+        "Non-HDL-Chol"
+      ],
+      "category": "Fettstoffwechsel",
+      "unit": "mg/dL",
+      "ref_max": 145.0,
+      "optimal_max": 130.0,
+      "critical_high": 220.0,
+      "description": "Das Non-HDL-Cholesterin ist die Differenz aus Gesamtcholesterin und HDL-Cholesterin und umfasst damit alle atherogenen (gefäßschädigenden) Lipoproteine – LDL, VLDL und Remnants. Es gilt als besserer Risikomarker als das LDL allein, besonders bei erhöhten Triglyceriden, und ist auch ohne Nüchternblutentnahme aussagekräftig.",
+      "high_info": "Erhöhte Werte steigern das Risiko für Arteriosklerose, Herzinfarkt und Schlaganfall. Ursachen: fett- und zuckerreiche Ernährung, Übergewicht, Bewegungsmangel, Diabetes, Hypothyreose, familiäre Fettstoffwechselstörungen.",
+      "low_info": "Niedrige Werte sind in der Regel günstig. Sehr niedrige Werte können auf eine Schilddrüsenüberfunktion, Mangelernährung oder eine Lebererkrankung hinweisen.",
+      "recommendations": "Zielwerte richten sich nach dem Gesamtrisiko: <145 mg/dl bei niedrigem, <130 mg/dl bei moderatem und <100 mg/dl bei hohem kardiovaskulärem Risiko. Wirksam sind mediterrane Ernährung, Ausdauersport, Gewichtsreduktion und der Verzicht auf Transfette."
+    },
+    {
       "id": "ldl_hdl_ratio",
       "name": "LDL/HDL",
       "short_name": "LDL/HDL",
@@ -803,7 +848,10 @@
         "Anti-TPO",
         "MAK",
         "Mikrosomale Antikörper",
-        "AK gg. Thyreoperoxidase"
+        "AK gg. Thyreoperoxidase",
+        "Anti-Thyreoid-Peroxydase",
+        "Anti-TPO II",
+        "Thyreoperoxidase-AK"
       ],
       "category": "Schilddrüse",
       "unit": "U/mL",
@@ -875,6 +923,52 @@
       "high_info": "Erhöhte Werte sind meist harmlos (Supplementierung). Selten: Lebererkrankungen, myeloproliferative Erkrankungen.",
       "low_info": "Mangel führt zu megaloblastärer Anämie, neurologischen Schäden (funikuläre Spinalerkrankung), Gedächtnisstörungen, Kribbeln in Händen/Füßen. Risikogruppen: Veganer, ältere Menschen, Metformin-Nutzer.",
       "recommendations": "Tierische Lebensmittel (Leber, Fisch, Fleisch, Eier). Bei Mangel/Veganer: Supplemente (1.000 µg/Tag). Regelmäßige Kontrolle bei Risikogruppen."
+    },
+    {
+      "id": "holotranscobalamin",
+      "name": "Holotranscobalamin",
+      "short_name": "Holo-TC",
+      "long_name": "Holotranscobalamin (aktives Vitamin B12)",
+      "aliases": [
+        "Holo-TC",
+        "HoloTC",
+        "Aktives B12",
+        "Aktives Vitamin B12",
+        "Holo-Transcobalamin"
+      ],
+      "category": "Vitamine & Mineralstoffe",
+      "unit": "pmol/L",
+      "ref_min": 50.0,
+      "ref_max": 150.0,
+      "optimal_min": 70.0,
+      "critical_low": 20.0,
+      "description": "Holotranscobalamin ist der an Transcobalamin gebundene, für die Zellen tatsächlich verfügbare Anteil des Vitamin B12 (etwa 10–30 % des Gesamt-B12). Es sinkt früher als das Gesamt-B12 und ist daher der empfindlichere Marker für einen beginnenden B12-Mangel. Nicht mit dem Gesamt-Vitamin-B12 verwechseln – die Werte sind nicht ineinander umrechenbar.",
+      "high_info": "Erhöhte Werte entstehen fast immer durch eine B12-Supplementierung oder Injektionen und sind unbedenklich. Selten liegen Nieren- oder Lebererkrankungen zugrunde.",
+      "low_info": "Werte unter 35 pmol/l sprechen für einen B12-Mangel, der Bereich 35–50 pmol/l ist ein Graubereich und sollte über Methylmalonsäure oder Homocystein abgeklärt werden. Ursachen: vegane Ernährung, Magenschleimhautentzündung, Metformin, Protonenpumpenhemmer, Resorptionsstörungen.",
+      "recommendations": "Bei Werten im Graubereich zusätzlich Methylmalonsäure und Homocystein bestimmen. B12-Quellen: Fleisch, Fisch, Eier, Milchprodukte; bei veganer Ernährung ist eine Supplementierung notwendig."
+    },
+    {
+      "id": "folsaeure",
+      "name": "Folsäure",
+      "short_name": "Folat",
+      "long_name": "Folsäure (Vitamin B9)",
+      "aliases": [
+        "Folat",
+        "Vitamin B9",
+        "Folsaeure",
+        "Serum-Folat"
+      ],
+      "category": "Vitamine & Mineralstoffe",
+      "unit": "ng/mL",
+      "ref_min": 3.9,
+      "ref_max": 26.8,
+      "optimal_min": 6.0,
+      "optimal_max": 20.0,
+      "critical_low": 2.0,
+      "description": "Folsäure (Vitamin B9) wird für die Zellteilung, die Blutbildung und den Homocystein-Stoffwechsel benötigt. Der Serumwert spiegelt vor allem die Zufuhr der letzten Tage wider; der Folatspiegel in den Erythrozyten zeigt die Langzeitversorgung.",
+      "high_info": "Erhöhte Werte sind meist unbedenklich und entstehen durch Nahrungsergänzungsmittel oder angereicherte Lebensmittel. Hohe Folsäurespiegel können jedoch einen Vitamin-B12-Mangel maskieren.",
+      "low_info": "Ein Mangel entsteht durch einseitige Ernährung, Alkoholkonsum, Schwangerschaft, chronisch-entzündliche Darmerkrankungen oder Medikamente (z.B. Methotrexat, Antiepileptika). Folge kann eine megaloblastäre Anämie sein.",
+      "recommendations": "Folatreiche Lebensmittel: grünes Blattgemüse, Hülsenfrüchte, Brokkoli, Vollkornprodukte, Leber. Bei Kinderwunsch und in der Schwangerschaft wird eine Supplementierung empfohlen. Bei Mangel immer auch Vitamin B12 mitbestimmen."
     },
     {
       "id": "ferritin",
@@ -1054,7 +1148,8 @@
         "Gesamtprotein",
         "Gesamteiweiß",
         "Total Protein",
-        "TP"
+        "TP",
+        "Gesamteiweiss"
       ],
       "category": "Eiweiß",
       "unit": "g/dL",
@@ -1126,7 +1221,8 @@
       "long_name": "Beta-Globuline (Serumelektrophorese)",
       "aliases": [
         "Beta-Globulin",
-        "β-Globulin"
+        "β-Globulin",
+        "ß-Globulin"
       ],
       "category": "Eiweiß",
       "unit": "%",
@@ -1145,7 +1241,7 @@
       "aliases": [
         "Gamma-Globulin",
         "γ-Globulin",
-        "Immunglobuline"
+        "y-Globulin"
       ],
       "category": "Eiweiß",
       "unit": "%",

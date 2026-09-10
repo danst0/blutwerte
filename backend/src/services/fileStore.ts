@@ -167,14 +167,104 @@ export function getReferenceDatabase(): ReferenceDatabase {
   return _referenceCache;
 }
 
+/**
+ * Vereinheitlicht Laborschreibweisen: Umlaute, griechische Buchstaben und
+ * Satzzeichen werden angeglichen, damit "Hämatokrit"/"Haematokrit" oder
+ * "Immunglobulin A"/"Immunglobulin-A" als derselbe Wert erkannt werden.
+ *
+ * Liefert zwei Varianten, wenn ein "ß" enthalten ist: Elektrophorese-Befunde
+ * schreiben das Beta der Globulin-Fraktion häufig als "ß-Globulin".
+ */
+function normalizeVariants(name: string): string[] {
+  const base = name.toLowerCase().trim();
+  const forms = new Set<string>([base]);
+  if (base.includes('ß')) forms.add(base.replace(/ß/g, 'beta'));
+
+  return Array.from(forms)
+    .map((form) =>
+      form
+        .replace(/α/g, 'alpha')
+        .replace(/β/g, 'beta')
+        .replace(/γ/g, 'gamma')
+        .replace(/ä/g, 'ae')
+        .replace(/ö/g, 'oe')
+        .replace(/ü/g, 'ue')
+        .replace(/ß/g, 'ss')
+        .replace(/[^a-z0-9]/g, '')
+    )
+    .filter((form) => form.length > 0);
+}
+
+function labelForms(ref: ReferenceValue): Array<{ forms: string[]; isName: boolean }> {
+  return [
+    { forms: normalizeVariants(ref.name), isName: true },
+    ...ref.aliases.map((a) => ({ forms: normalizeVariants(a), isName: false })),
+  ];
+}
+
+/** Kürzere Treffer als drei Zeichen ("Ca", "K", "TG") sind als Präfix zu unspezifisch. */
+const MIN_PREFIX_LENGTH = 3;
+
+/**
+ * Trefferqualität in absteigender Rangfolge: exakter Name, exakter Alias,
+ * Präfix auf dem Namen, Präfix auf einem Alias. Innerhalb einer Stufe gewinnt
+ * die längere Übereinstimmung. Der Vorrang des Namens trennt Kollisionen wie
+ * "Immunglobulin-E" gegen den Alias "Immunglobuline" der Gamma-Fraktion.
+ */
+function scoreLabel(label: string[], isName: boolean, name: string[]): number {
+  const exactTier = isName ? 3000 : 2000;
+  const prefixTier = isName ? 1000 : 500;
+  let best = 0;
+
+  for (const l of label) {
+    for (const n of name) {
+      if (l === n) {
+        best = Math.max(best, exactTier + l.length);
+      } else if (n.length >= MIN_PREFIX_LENGTH && l.startsWith(n)) {
+        // Laborberichte kürzen Bezeichnungen auf die Spaltenbreite: "mittlere Blutgluco"
+        best = Math.max(best, prefixTier + n.length);
+      } else if (l.length >= MIN_PREFIX_LENGTH && n.startsWith(l)) {
+        // Befunde hängen Erläuterungen an: "GOT (ASAT)", "TSH (basal)"
+        best = Math.max(best, prefixTier + l.length);
+      }
+    }
+  }
+
+  return best;
+}
+
 export function findReferenceValue(name: string): ReferenceValue | undefined {
+  const forms = new Set(normalizeVariants(name));
   const db = getReferenceDatabase();
-  const lower = name.toLowerCase();
-  return db.values.find(
-    (v) =>
-      v.name.toLowerCase() === lower ||
-      v.aliases.some((a) => a.toLowerCase() === lower)
+  return (
+    db.values.find((v) => normalizeVariants(v.name).some((l) => forms.has(l))) ??
+    db.values.find((v) => v.aliases.some((a) => normalizeVariants(a).some((l) => forms.has(l))))
   );
+}
+
+/**
+ * Wie findReferenceValue, erlaubt zusätzlich abgeschnittene oder ergänzte
+ * Bezeichnungen. Es gewinnt immer der längste Treffer, damit z.B.
+ * "LDL/HDL Risiko Ind" beim LDL/HDL-Quotienten landet und nicht bei "HDL".
+ */
+export function matchReferenceValue(name: string): ReferenceValue | undefined {
+  const forms = normalizeVariants(name);
+  if (forms.length === 0) return undefined;
+
+  let best: ReferenceValue | undefined;
+  let bestScore = 0;
+
+  for (const ref of getReferenceDatabase().values) {
+    for (const label of labelForms(ref)) {
+      const score = scoreLabel(label.forms, label.isName, forms);
+      if (score > bestScore) {
+        bestScore = score;
+        best = ref;
+      }
+    }
+  }
+
+  return best;
 }
 
 /**

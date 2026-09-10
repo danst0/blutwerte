@@ -1,6 +1,6 @@
 import { getConfig } from '../config';
 import type { Gender, LLMMessage, LLMResponse, UserData, ReferenceValue, ExtractedBloodValue, ScanResult } from '../types';
-import { findReferenceValue, getReferenceDatabase } from './fileStore';
+import { findReferenceValue, matchReferenceValue } from './fileStore';
 
 const SYSTEM_PROMPT = `Du bist ein hilfreicher medizinischer Assistent, der Blutwerte erklärt und einordnet.
 Du hast Zugriff auf die Blutwerte des Nutzers und kannst Trends analysieren.
@@ -403,13 +403,13 @@ Wichtige Regeln:
 - Extrahiere ALLE sichtbaren Werte, auch wenn sie im Normalbereich liegen
 - Bei Kommazahlen verwende einen Punkt als Dezimaltrenner
 - Ignoriere Referenzbereiche, extrahiere nur die gemessenen Werte
+- Erfasse auch handschriftlich ergänzte Werte
+- Ein Dokument kann mehrere Befunde enthalten – werte alle Seiten aus
 - Wenn das Bild keinen Laborbericht zeigt, antworte mit: { "values": [], "error": "Kein Laborbericht erkannt" }`;
 
 function matchAndEnrichValues(rawValues: Array<{ name: string; value: number; unit: string }>): ExtractedBloodValue[] {
-  const db = getReferenceDatabase();
-
   return rawValues.map((raw) => {
-    const ref = findReferenceValue(raw.name);
+    const ref = matchReferenceValue(raw.name);
     if (ref) {
       return {
         name: ref.name,
@@ -422,27 +422,8 @@ function matchAndEnrichValues(rawValues: Array<{ name: string; value: number; un
       };
     }
 
-    // Try fuzzy match: check if any reference value's name/alias is contained
-    const lower = raw.name.toLowerCase();
-    const fuzzy = db.values.find(
-      (v) =>
-        lower.includes(v.name.toLowerCase()) ||
-        v.name.toLowerCase().includes(lower) ||
-        v.aliases.some((a) => lower.includes(a.toLowerCase()) || a.toLowerCase().includes(lower))
-    );
-
-    if (fuzzy) {
-      return {
-        name: fuzzy.name,
-        value: raw.value,
-        unit: raw.unit || fuzzy.unit,
-        category: fuzzy.category,
-        short_name: fuzzy.short_name,
-        long_name: fuzzy.long_name,
-        ref_id: fuzzy.id,
-      };
-    }
-
+    // Unbekannte Bezeichnung unverändert übernehmen – lieber ohne Referenz als
+    // unter falschem Namen (Holotranscobalamin ist kein Vitamin B12).
     return {
       name: raw.name,
       value: raw.value,
