@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/Badge';
 import { TrafficDot } from '@/components/TrafficLight';
 import { ShareDialog } from '@/components/ShareDialog';
-import { getValueStatus, formatDate, formatNumber } from '@/lib/utils';
+import { getValueStatus, formatDate, formatValue } from '@/lib/utils';
 import type { Share, ReceivedShare, BloodEntry, ReferenceValue, Gender } from '@/types';
 import {
   Users,
@@ -144,7 +144,7 @@ export default function SharedData() {
             {sharedEntries.map((entry) => {
               const isOpen = expanded.has(entry.id);
               const abnormal = entry.values.filter((v) => {
-                const s = getValueStatus(v.value, refDb[v.name], sharedGender);
+                const s = getValueStatus(v.value, refDb[v.name], sharedGender, v.comparator);
                 return s !== 'normal' && s !== 'unknown';
               });
 
@@ -179,7 +179,7 @@ export default function SharedData() {
                           {entry.values.slice(0, 6).map((v) => (
                             <TrafficDot
                               key={v.name}
-                              status={getValueStatus(v.value, refDb[v.name], sharedGender)}
+                              status={getValueStatus(v.value, refDb[v.name], sharedGender, v.comparator)}
                               size="sm"
                             />
                           ))}
@@ -205,7 +205,7 @@ export default function SharedData() {
                       )}
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {entry.values.map((v) => {
-                          const status = getValueStatus(v.value, refDb[v.name], sharedGender);
+                          const status = getValueStatus(v.value, refDb[v.name], sharedGender, v.comparator);
                           return (
                             <div
                               key={v.name}
@@ -217,7 +217,7 @@ export default function SharedData() {
                                   <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{v.name}</p>
                                 )}
                                 <p className="font-semibold text-gray-900 dark:text-gray-100">
-                                  {formatNumber(v.value)} <span className="text-xs font-normal text-gray-400">{v.unit}</span>
+                                  {formatValue(v.value, v.comparator)} <span className="text-xs font-normal text-gray-400">{v.unit}</span>
                                 </p>
                               </div>
                               <StatusBadge status={status} />

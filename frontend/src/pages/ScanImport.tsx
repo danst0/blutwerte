@@ -38,8 +38,13 @@ export default function ScanImport() {
   }, []);
 
   const findRef = useCallback(
-    (name: string): ReferenceValue | undefined => {
-      const lower = name.toLowerCase();
+    (val: ExtractedBloodValue): ReferenceValue | undefined => {
+      // Das Backend hat bereits zugeordnet – die ID ist eindeutiger als der Name
+      if (val.ref_id) {
+        const byId = allRefs.find((r) => r.id === val.ref_id);
+        if (byId) return byId;
+      }
+      const lower = val.name.toLowerCase();
       return allRefs.find(
         (r) =>
           r.name.toLowerCase() === lower ||
@@ -105,7 +110,11 @@ export default function ScanImport() {
     }
   };
 
-  const updateValue = (index: number, field: keyof ExtractedBloodValue, val: string | number) => {
+  const updateValue = (
+    index: number,
+    field: keyof ExtractedBloodValue,
+    val: string | number | undefined
+  ) => {
     setValues((prev) =>
       prev.map((v, i) => (i === index ? { ...v, [field]: val } : v))
     );
@@ -133,6 +142,7 @@ export default function ScanImport() {
         values: validValues.map((v) => ({
           name: v.name.trim(),
           value: v.value,
+          ...(v.comparator ? { comparator: v.comparator } : {}),
           unit: v.unit.trim(),
           category: v.category || 'Sonstige',
           ...(v.short_name ? { short_name: v.short_name } : {}),
@@ -241,8 +251,8 @@ export default function ScanImport() {
           ) : (
             <div className="space-y-3">
               {values.map((val, index) => {
-                const ref = findRef(val.name);
-                const status = ref ? getValueStatus(val.value, ref, user?.gender) : null;
+                const ref = findRef(val);
+                const status = ref ? getValueStatus(val.value, ref, user?.gender, val.comparator) : null;
                 const isMatched = !!val.ref_id;
 
                 return (
@@ -278,6 +288,18 @@ export default function ScanImport() {
 
                         {/* Value + unit */}
                         <div className="flex items-center gap-2">
+                          <select
+                            value={val.comparator ?? ''}
+                            onChange={(e) =>
+                              updateValue(index, 'comparator', e.target.value || undefined)
+                            }
+                            title="Bestimmungsgrenze"
+                            className="input-base text-sm py-1 w-14"
+                          >
+                            <option value="">–</option>
+                            <option value="&lt;">&lt;</option>
+                            <option value="&gt;">&gt;</option>
+                          </select>
                           <input
                             type="number"
                             value={val.value}

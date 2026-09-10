@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { getValueStatus, getEffectiveRange, formatDate, formatNumber, getTrend } from '@/lib/utils';
+import { getValueStatus, getEffectiveRange, formatDate, formatNumber, formatValue, getTrend } from '@/lib/utils';
 import type { ReferenceValue, ValueHistoryPoint } from '@/types';
 import { ArrowLeft, TrendingUp, TrendingDown, Minus, Info, BookOpen, Lightbulb } from 'lucide-react';
 import {
@@ -83,11 +83,11 @@ export default function ValueDetail() {
     date: h.date,
     dateLabel: format(parseISO(h.date), 'dd.MM.yyyy'),
     value: h.value,
-    status: getValueStatus(h.value, ref ?? undefined, user?.gender),
+    status: getValueStatus(h.value, ref ?? undefined, user?.gender, h.comparator),
   }));
 
   const latest = history[history.length - 1];
-  const latestStatus = latest ? getValueStatus(latest.value, ref ?? undefined, user?.gender) : 'unknown';
+  const latestStatus = latest ? getValueStatus(latest.value, ref ?? undefined, user?.gender, latest.comparator) : 'unknown';
   const trend = getTrend(history);
 
   const unit = latest?.unit ?? ref?.unit ?? '';
@@ -140,7 +140,7 @@ export default function ValueDetail() {
             <div className="text-right">
               <div className="flex items-center gap-2">
                 <span className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-                  {formatNumber(latest.value)}
+                  {formatValue(latest.value, latest.comparator)}
                 </span>
                 <span className="text-gray-500 dark:text-gray-400">{unit}</span>
                 {trend === 'up' && <TrendingUp className="w-5 h-5 text-blue-500" />}
@@ -330,12 +330,12 @@ export default function ValueDetail() {
                 </thead>
                 <tbody>
                   {[...filteredHistory].reverse().map((h) => {
-                    const status = getValueStatus(h.value, ref ?? undefined, user?.gender);
+                    const status = getValueStatus(h.value, ref ?? undefined, user?.gender, h.comparator);
                     return (
                       <tr key={`${h.date}-${h.entryId}`} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                         <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{formatDate(h.date)}</td>
                         <td className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-gray-100">
-                          {formatNumber(h.value)} <span className="text-xs font-normal text-gray-400">{unit}</span>
+                          {formatValue(h.value, h.comparator)} <span className="text-xs font-normal text-gray-400">{unit}</span>
                         </td>
                         <td className="px-4 py-3">
                           <StatusBadge status={status} />

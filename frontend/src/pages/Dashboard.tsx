@@ -6,8 +6,8 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/Badge';
 import { TrafficDot } from '@/components/TrafficLight';
-import { getValueStatus, getEffectiveRange, formatDate, formatNumber, groupByCategory } from '@/lib/utils';
-import type { UserData, BloodEntry, BloodValue, ReferenceValue } from '@/types';
+import { getValueStatus, getEffectiveRange, formatDate, formatValue, groupByCategory } from '@/lib/utils';
+import type { UserData, BloodEntry, BloodValue, ReferenceValue, ValueComparator } from '@/types';
 import {
   PlusCircle,
   MessageSquareHeart,
@@ -60,6 +60,7 @@ interface ValueSummary {
   long_name?: string;
   category: string;
   latestValue: number;
+  latestComparator?: ValueComparator;
   unit: string;
   ref?: ReferenceValue;
   history: { date: string; value: number }[];
@@ -96,12 +97,13 @@ export default function Dashboard() {
     if (!userData) return [];
     const sorted = [...userData.entries].sort((a, b) => a.date.localeCompare(b.date));
     const byName: Record<string, { date: string; value: number }[]> = {};
-    const meta: Record<string, { category: string; unit: string; long_name?: string }> = {};
+    const meta: Record<string, { category: string; unit: string; long_name?: string; comparator?: ValueComparator }> = {};
     for (const entry of sorted) {
       for (const val of entry.values) {
         if (!byName[val.name]) byName[val.name] = [];
         byName[val.name].push({ date: entry.date, value: val.value });
-        meta[val.name] = { category: val.category, unit: val.unit, long_name: val.long_name };
+        // Einträge sind aufsteigend sortiert – am Ende steht die jüngste Messung
+        meta[val.name] = { category: val.category, unit: val.unit, long_name: val.long_name, comparator: val.comparator };
       }
     }
     return Object.entries(byName)
@@ -110,6 +112,7 @@ export default function Dashboard() {
         long_name: meta[name].long_name,
         category: meta[name].category,
         latestValue: history[history.length - 1].value,
+        latestComparator: meta[name].comparator,
         unit: meta[name].unit,
         ref: refDb[name],
         history,
@@ -117,15 +120,15 @@ export default function Dashboard() {
       .sort((a, b) => {
         // Sort by status severity first
         const statusOrder = { critical_high: 0, critical_low: 0, high: 1, low: 1, warning: 2, unknown: 3, normal: 4 };
-        const sa = getValueStatus(a.latestValue, a.ref, user?.gender);
-        const sb = getValueStatus(b.latestValue, b.ref, user?.gender);
+        const sa = getValueStatus(a.latestValue, a.ref, user?.gender, a.latestComparator);
+        const sb = getValueStatus(b.latestValue, b.ref, user?.gender, b.latestComparator);
         return (statusOrder[sa] ?? 4) - (statusOrder[sb] ?? 4);
       });
   })();
 
   const statusCounts = valueSummary.reduce(
     (acc, v) => {
-      const s = getValueStatus(v.latestValue, v.ref, user?.gender);
+      const s = getValueStatus(v.latestValue, v.ref, user?.gender, v.latestComparator);
       if (s === 'normal') acc.normal++;
       else if (s === 'warning') acc.warning++;
       else if (s === 'unknown') acc.unknown++;
@@ -138,7 +141,7 @@ export default function Dashboard() {
   const filteredSummary = statusFilter === null
     ? valueSummary
     : valueSummary.filter(v => {
-        const s = getValueStatus(v.latestValue, v.ref, user?.gender);
+        const s = getValueStatus(v.latestValue, v.ref, user?.gender, v.latestComparator);
         if (statusFilter === 'normal') return s === 'normal';
         if (statusFilter === 'warning') return s === 'warning';
         if (statusFilter === 'abnormal') return s !== 'normal' && s !== 'warning' && s !== 'unknown';
@@ -209,7 +212,7 @@ export default function Dashboard() {
 
           {/* Alerts */}
           {valueSummary.some(v => {
-            const s = getValueStatus(v.latestValue, v.ref, user?.gender);
+            const s = getValueStatus(v.latestValue, v.ref, user?.gender, v.latestComparator);
             return s === 'critical_high' || s === 'critical_low';
           }) && (
             <div className="flex items-start gap-3 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
@@ -237,7 +240,7 @@ export default function Dashboard() {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {values.map((v) => {
-                  const status = getValueStatus(v.latestValue, v.ref, user?.gender);
+                  const status = getValueStatus(v.latestValue, v.ref, user?.gender, v.latestComparator);
                   const trend = getTrend(v.history);
                   return (
                     <Link key={v.name} to={`/values/${encodeURIComponent(v.name)}`}>
@@ -260,7 +263,7 @@ export default function Dashboard() {
                         <div className="flex items-end justify-between">
                           <div>
                             <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                              {formatNumber(v.latestValue)}
+                              {formatValue(v.latestValue, v.latestComparator)}
                             </span>
                             <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">{v.unit}</span>
                             {trend && (
@@ -324,7 +327,7 @@ export default function Dashboard() {
                     {entry.values.slice(0, 4).map((v) => (
                       <TrafficDot
                         key={v.name}
-                        status={getValueStatus(v.value, refDb[v.name], user?.gender)}
+                        status={getValueStatus(v.value, refDb[v.name], user?.gender, v.comparator)}
                         size="sm"
                       />
                     ))}

@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import type { Gender, ReferenceValue, ValueStatus } from '@/types';
+import type { Gender, ReferenceValue, ValueStatus, ValueComparator } from '@/types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -21,10 +21,28 @@ export function getEffectiveRange(ref: ReferenceValue, gender?: Gender): { min: 
   return { min, max };
 }
 
-export function getValueStatus(value: number, ref: ReferenceValue | undefined, gender?: Gender): ValueStatus {
+export function getValueStatus(
+  value: number,
+  ref: ReferenceValue | undefined,
+  gender?: Gender,
+  comparator?: ValueComparator
+): ValueStatus {
   if (!ref) return 'unknown';
 
   const { min: refMin, max: refMax } = getEffectiveRange(ref, gender);
+
+  // Bestimmungsgrenzen wie "<5" sagen nur aus, dass der echte Wert darunter
+  // liegt – bewertbar ist ein solcher Wert deshalb nur in eine Richtung.
+  if (comparator === '<') {
+    if (ref.critical_low !== undefined && value <= ref.critical_low) return 'critical_low';
+    if (value <= refMin) return 'low';
+    return value <= refMax ? 'normal' : 'unknown';
+  }
+  if (comparator === '>') {
+    if (ref.critical_high !== undefined && value >= ref.critical_high) return 'critical_high';
+    if (value >= refMax) return 'high';
+    return value >= refMin ? 'normal' : 'unknown';
+  }
 
   if (ref.critical_low !== undefined && value <= ref.critical_low) return 'critical_low';
   if (ref.critical_high !== undefined && value >= ref.critical_high) return 'critical_high';
@@ -94,6 +112,20 @@ export function formatDate(dateStr: string): string {
 
 export function formatNumber(n: number): string {
   return n % 1 === 0 ? n.toString() : n.toLocaleString('de-DE', { maximumFractionDigits: 2 });
+}
+
+/** Stellt Bestimmungsgrenzen als "<5" dar, gewöhnliche Werte unverändert. */
+export function formatValue(value: number, comparator?: ValueComparator): string {
+  return comparator ? `${comparator}${formatNumber(value)}` : formatNumber(value);
+}
+
+/** Nimmt Eingaben wie "5", "5,3" oder "<5" entgegen. */
+export function parseValueInput(input: string): { value: number; comparator?: ValueComparator } {
+  const match = input.trim().match(/^([<>])?\s*(-?\d+(?:[.,]\d+)?)$/);
+  if (!match) return { value: NaN };
+
+  const value = parseFloat(match[2].replace(',', '.'));
+  return match[1] ? { value, comparator: match[1] as ValueComparator } : { value };
 }
 
 export function getTrend(history: { value: number }[]): 'up' | 'down' | 'stable' | null {

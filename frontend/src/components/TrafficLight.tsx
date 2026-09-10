@@ -1,9 +1,10 @@
 import React from 'react';
-import { cn, getValueStatus, getStatusLabel } from '@/lib/utils';
-import type { Gender, ReferenceValue, ValueStatus } from '@/types';
+import { cn, getValueStatus, getStatusLabel, formatValue } from '@/lib/utils';
+import type { Gender, ReferenceValue, ValueStatus, ValueComparator } from '@/types';
 
 interface TrafficLightProps {
   value: number;
+  comparator?: ValueComparator;
   unit: string;
   ref?: ReferenceValue;
   gender?: Gender;
@@ -27,8 +28,8 @@ const dotSizes = {
   lg: 'w-5 h-5',
 };
 
-export function TrafficLight({ value, unit, ref: refValue, gender, size = 'md', showLabel = false }: TrafficLightProps) {
-  const status = getValueStatus(value, refValue, gender);
+export function TrafficLight({ value, comparator, unit, ref: refValue, gender, size = 'md', showLabel = false }: TrafficLightProps) {
+  const status = getValueStatus(value, refValue, gender, comparator);
 
   return (
     <div className="flex items-center gap-2">
@@ -41,7 +42,7 @@ export function TrafficLight({ value, unit, ref: refValue, gender, size = 'md', 
         title={getStatusLabel(status)}
       />
       <span className="font-semibold tabular-nums">
-        {value.toLocaleString('de-DE', { maximumFractionDigits: 2 })} {unit}
+        {formatValue(value, comparator)} {unit}
       </span>
       {showLabel && (
         <span className="text-sm text-gray-500 dark:text-gray-400">({getStatusLabel(status)})</span>

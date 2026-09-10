@@ -10,6 +10,7 @@ bloodValuesRouter.use(requireAuth);
 const bloodValueSchema = z.object({
   name: z.string().min(1).max(100),
   value: z.number().finite(),
+  comparator: z.enum(['<', '>']).optional(),
   unit: z.string().min(1).max(50),
   category: z.string().min(1).max(100),
   short_name: z.string().max(100).optional(),
@@ -133,7 +134,13 @@ bloodValuesRouter.get(
           (v) => v.name.toLowerCase() === valueName.toLowerCase()
         );
         if (!val) return [];
-        return [{ date: entry.date, value: val.value, unit: val.unit, entryId: entry.id }];
+        return [{
+          date: entry.date,
+          value: val.value,
+          ...(val.comparator ? { comparator: val.comparator } : {}),
+          unit: val.unit,
+          entryId: entry.id,
+        }];
       })
       .sort((a, b) => a.date.localeCompare(b.date));
 

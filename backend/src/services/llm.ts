@@ -1,5 +1,5 @@
 import { getConfig } from '../config';
-import type { Gender, LLMMessage, LLMResponse, UserData, ReferenceValue, ExtractedBloodValue, ScanResult } from '../types';
+import type { Gender, LLMMessage, LLMResponse, UserData, ReferenceValue, ExtractedBloodValue, ScanResult, ValueComparator } from '../types';
 import { findReferenceValue, matchReferenceValue } from './fileStore';
 
 const SYSTEM_PROMPT = `Du bist ein hilfreicher medizinischer Assistent, der Blutwerte erklärt und einordnet.
@@ -88,15 +88,22 @@ function buildUserContext(userData: UserData): string {
       let status = '';
       if (ref) {
         const { min: refMin, max: refMax } = getEffectiveRange(ref, gender);
-        if (val.value < refMin) status = ' ⬇ UNTER Referenzbereich';
+        if (val.comparator === '<') {
+          // Messwert unterhalb der Bestimmungsgrenze: nur nach oben aussagekräftig
+          status = val.value <= refMax ? ' ✓ Normal (unterhalb der Bestimmungsgrenze)' : ' ? nicht bewertbar';
+        } else if (val.comparator === '>') {
+          status = val.value >= refMax ? ' ⬆ ÜBER Referenzbereich' : ' ? nicht bewertbar';
+        } else if (val.value < refMin) status = ' ⬇ UNTER Referenzbereich';
         else if (val.value > refMax) status = ' ⬆ ÜBER Referenzbereich';
         else status = ' ✓ Normal';
-        if (ref.critical_low !== undefined && val.value <= ref.critical_low) status = ' 🚨 KRITISCH NIEDRIG';
-        if (ref.critical_high !== undefined && val.value >= ref.critical_high) status = ' 🚨 KRITISCH HOCH';
+        if (!val.comparator) {
+          if (ref.critical_low !== undefined && val.value <= ref.critical_low) status = ' 🚨 KRITISCH NIEDRIG';
+          if (ref.critical_high !== undefined && val.value >= ref.critical_high) status = ' 🚨 KRITISCH HOCH';
+        }
         const rangeStr = refMin !== -Infinity && refMax !== Infinity ? ` [Ref: ${refMin}–${refMax}]` : '';
         status += rangeStr;
       }
-      context += `- ${val.name}: ${val.value} ${val.unit}${status}\n`;
+      context += `- ${val.name}: ${val.comparator ?? ''}${val.value} ${val.unit}${status}\n`;
     }
     context += '\n';
   }
@@ -393,12 +400,14 @@ Antworte AUSSCHLIESSLICH mit einem JSON-Objekt im folgenden Format (kein Markdow
   "date": "YYYY-MM-DD oder null wenn nicht erkennbar",
   "lab_name": "Name des Labors oder null wenn nicht erkennbar",
   "values": [
-    { "name": "Bezeichnung des Wertes", "value": 123.4, "unit": "Einheit" }
+    { "name": "Bezeichnung des Wertes", "value": 123.4, "unit": "Einheit", "comparator": "<" }
   ]
 }
 
 Wichtige Regeln:
 - "value" muss immer eine Zahl sein (kein Text)
+- Steht auf dem Befund "<5" oder "> 200", gehört die Zahl in "value" und das
+  Zeichen in "comparator"; sonst lasse "comparator" weg
 - Verwende die exakte Bezeichnung wie sie auf dem Laborbericht steht
 - Extrahiere ALLE sichtbaren Werte, auch wenn sie im Normalbereich liegen
 - Bei Kommazahlen verwende einen Punkt als Dezimaltrenner
@@ -407,28 +416,56 @@ Wichtige Regeln:
 - Ein Dokument kann mehrere Befunde enthalten – werte alle Seiten aus
 - Wenn das Bild keinen Laborbericht zeigt, antworte mit: { "values": [], "error": "Kein Laborbericht erkannt" }`;
 
-function matchAndEnrichValues(rawValues: Array<{ name: string; value: number; unit: string }>): ExtractedBloodValue[] {
-  return rawValues.map((raw) => {
+interface RawScanValue {
+  name: string;
+  value: number | string;
+  unit?: string;
+  comparator?: string;
+}
+
+/**
+ * Trennt eine Bestimmungsgrenze vom Zahlenwert. Das Modell liefert sie in
+ * "comparator", schreibt sie gelegentlich aber auch in "value" ("<5").
+ */
+function splitComparator(raw: RawScanValue): { value: number; comparator?: ValueComparator } {
+  const text = String(raw.value).trim();
+  const inValue = text.match(/^([<>])\s*(.+)$/);
+
+  const sign = (inValue?.[1] ?? raw.comparator ?? '').trim();
+  const value = Number(String(inValue?.[2] ?? text).replace(',', '.'));
+
+  return sign === '<' || sign === '>'
+    ? { value, comparator: sign }
+    : { value };
+}
+
+function matchAndEnrichValues(rawValues: RawScanValue[]): ExtractedBloodValue[] {
+  return rawValues.flatMap((raw) => {
+    const { value, comparator } = splitComparator(raw);
+    if (!Number.isFinite(value)) return [];
+
     const ref = matchReferenceValue(raw.name);
     if (ref) {
-      return {
+      return [{
         name: ref.name,
-        value: raw.value,
+        value,
+        ...(comparator ? { comparator } : {}),
         unit: raw.unit || ref.unit,
         category: ref.category,
         short_name: ref.short_name,
         long_name: ref.long_name,
         ref_id: ref.id,
-      };
+      }];
     }
 
     // Unbekannte Bezeichnung unverändert übernehmen – lieber ohne Referenz als
     // unter falschem Namen (Holotranscobalamin ist kein Vitamin B12).
-    return {
+    return [{
       name: raw.name,
-      value: raw.value,
-      unit: raw.unit,
-    };
+      value,
+      ...(comparator ? { comparator } : {}),
+      unit: raw.unit ?? '',
+    }];
   });
 }
 
@@ -487,7 +524,7 @@ export async function analyzeBloodTestImage(
     jsonStr = codeBlockMatch[1].trim();
   }
 
-  let parsed: { date?: string; lab_name?: string; values?: Array<{ name: string; value: number; unit: string }>; error?: string };
+  let parsed: { date?: string; lab_name?: string; values?: RawScanValue[]; error?: string };
   try {
     parsed = JSON.parse(jsonStr);
   } catch {

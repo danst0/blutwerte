@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/Badge';
 import { TrafficDot } from '@/components/TrafficLight';
-import { getValueStatus, formatDate, formatNumber } from '@/lib/utils';
+import { getValueStatus, formatDate, formatValue } from '@/lib/utils';
 import type { UserData, BloodEntry, ReferenceValue } from '@/types';
 import {
   PlusCircle,
@@ -73,8 +73,8 @@ export default function AllValues() {
     const rows = [['Datum', 'Labor', 'Wert', 'Einheit', 'Kategorie', 'Status']];
     for (const entry of userData.entries) {
       for (const val of entry.values) {
-        const status = getValueStatus(val.value, refDb[val.name], user?.gender);
-        rows.push([entry.date, entry.lab_name || '', val.name, String(val.value), val.unit, val.category, status]);
+        const status = getValueStatus(val.value, refDb[val.name], user?.gender, val.comparator);
+        rows.push([entry.date, entry.lab_name || '', val.name, `${val.comparator ?? ''}${val.value}`, val.unit, val.category, status]);
       }
     }
     const csv = rows.map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
@@ -164,7 +164,7 @@ export default function AllValues() {
               ? entry.values.filter((v) => v.category === filterCategory)
               : entry.values;
             const abnormal = filteredValues.filter((v) => {
-              const s = getValueStatus(v.value, refDb[v.name], user?.gender);
+              const s = getValueStatus(v.value, refDb[v.name], user?.gender, v.comparator);
               return s !== 'normal' && s !== 'unknown';
             });
 
@@ -200,7 +200,7 @@ export default function AllValues() {
                         {filteredValues.slice(0, 6).map((v) => (
                           <TrafficDot
                             key={v.name}
-                            status={getValueStatus(v.value, refDb[v.name], user?.gender)}
+                            status={getValueStatus(v.value, refDb[v.name], user?.gender, v.comparator)}
                             size="sm"
                           />
                         ))}
@@ -236,7 +236,7 @@ export default function AllValues() {
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {filteredValues.map((v) => {
-                        const status = getValueStatus(v.value, refDb[v.name], user?.gender);
+                        const status = getValueStatus(v.value, refDb[v.name], user?.gender, v.comparator);
                         return (
                           <Link
                             key={v.name}
@@ -249,7 +249,7 @@ export default function AllValues() {
                                 <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{v.name}</p>
                               )}
                               <p className="font-semibold text-gray-900 dark:text-gray-100">
-                                {formatNumber(v.value)} <span className="text-xs font-normal text-gray-400">{v.unit}</span>
+                                {formatValue(v.value, v.comparator)} <span className="text-xs font-normal text-gray-400">{v.unit}</span>
                               </p>
                             </div>
                             <StatusBadge status={status} />

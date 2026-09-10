@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { StatusBadge } from '@/components/ui/Badge';
-import { getValueStatus } from '@/lib/utils';
+import { getValueStatus, parseValueInput } from '@/lib/utils';
 import type { ReferenceValue, BloodValue } from '@/types';
 import { Plus, Trash2, Search, CheckCircle } from 'lucide-react';
 
@@ -131,7 +131,7 @@ export default function EnterValues() {
       return;
     }
 
-    const invalidValues = validRows.filter((r) => isNaN(parseFloat(r.value)));
+    const invalidValues = validRows.filter((r) => isNaN(parseValueInput(r.value).value));
     if (invalidValues.length > 0) {
       setError(`Ungültiger Wert für: ${invalidValues.map((r) => r.name).join(', ')}`);
       return;
@@ -143,14 +143,18 @@ export default function EnterValues() {
         date,
         lab_name: labName || undefined,
         notes: notes || undefined,
-        values: validRows.map((r) => ({
+        values: validRows.map((r) => {
+          const { value, comparator } = parseValueInput(r.value);
+          return {
           name: r.name.trim(),
-          value: parseFloat(r.value),
+          value,
+          ...(comparator ? { comparator } : {}),
           unit: r.unit.trim(),
           category: r.category.trim() || 'Sonstige',
           ...(r.short_name ? { short_name: r.short_name } : {}),
           ...(r.long_name ? { long_name: r.long_name } : {}),
-        })),
+          };
+        }),
       });
       setSuccess(true);
       setTimeout(() => navigate('/dashboard'), 1500);
@@ -268,9 +272,9 @@ export default function EnterValues() {
           ) : (
             <div className="space-y-3">
               {rows.map((row) => {
-                const numVal = parseFloat(row.value);
+                const { value: numVal, comparator } = parseValueInput(row.value);
                 const status = !isNaN(numVal) && row.value !== '' && row.ref
-                  ? getValueStatus(numVal, row.ref, user?.gender)
+                  ? getValueStatus(numVal, row.ref, user?.gender, comparator)
                   : null;
 
                 return (
@@ -299,11 +303,11 @@ export default function EnterValues() {
                         {/* Value + unit */}
                         <div className="flex items-center gap-2">
                           <input
-                            type="number"
-                            placeholder="Wert"
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="Wert oder <5"
                             value={row.value}
                             onChange={(e) => updateRow(row.id, 'value', e.target.value)}
-                            step="any"
                             className="input-base text-sm py-1 w-32"
                           />
                           {row.ref ? (

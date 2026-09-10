@@ -21,9 +21,16 @@ export interface Lifestyle {
 
 // ─── Blood Values ──────────────────────────────────────────────────────────────
 
+/**
+ * Bestimmungsgrenze eines Laborwerts: "<5" heißt, der echte Wert liegt
+ * unterhalb von 5 und ist nicht genauer messbar.
+ */
+export type ValueComparator = '<' | '>';
+
 export interface BloodValue {
   name: string;
   value: number;
+  comparator?: ValueComparator;
   unit: string;
   category: string;
   short_name?: string;
@@ -129,6 +136,7 @@ export interface ChatHistory {
 export interface ExtractedBloodValue {
   name: string;
   value: number;
+  comparator?: ValueComparator;
   unit: string;
   category?: string;
   short_name?: string;
@@ -168,6 +176,7 @@ export interface ReceivedShare {
 export interface ValueHistoryPoint {
   date: string;
   value: number;
+  comparator?: ValueComparator;
   unit: string;
   entryId: string;
 }
