@@ -1,4 +1,4 @@
-import type { AuthUser, UserData, BloodEntry, ReferenceDatabase, ReferenceValue, ChatHistory, ChatMessage, ValueHistory, ApiToken, ApiTokenCreated, Gender, Lifestyle, ScanResult, Share, ReceivedShare } from '@/types';
+import type { AuthUser, UserData, BloodEntry, ReferenceDatabase, ReferenceValue, ChatHistory, ChatMessage, ValueHistory, ApiToken, ApiTokenCreated, Gender, Lifestyle, ScanResult, Share, ReceivedShare, ReportOptions } from '@/types';
 
 const BASE = '/api';
 
@@ -149,6 +149,45 @@ export const ai = {
     return res.json();
   },
 };
+
+// ─── PDF-Report ───────────────────────────────────────────────────────────────
+
+export const report = {
+  /** Lädt die PDF-Analyse und liefert sie samt vom Server vorgeschlagenem Dateinamen. */
+  pdf: async (options: ReportOptions): Promise<{ blob: Blob; filename: string }> => {
+    const res = await fetch(`${BASE}/report/pdf`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(options),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: res.statusText }));
+      const error = new Error(body.message || body.error || `HTTP ${res.status}`);
+      (error as ApiError).status = res.status;
+      (error as ApiError).body = body;
+      throw error;
+    }
+
+    const disposition = res.headers.get('Content-Disposition') ?? '';
+    const match = disposition.match(/filename="?([^";]+)"?/);
+
+    return { blob: await res.blob(), filename: match?.[1] ?? 'Blutwerte-Analyse.pdf' };
+  },
+};
+
+/** Stößt im Browser den Download eines bereits geladenen Blobs an. */
+export function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
 
 // ─── Shares ───────────────────────────────────────────────────────────────────
 

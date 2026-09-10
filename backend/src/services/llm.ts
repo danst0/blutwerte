@@ -1,6 +1,7 @@
 import { getConfig } from '../config';
-import type { Gender, LLMMessage, LLMResponse, UserData, ReferenceValue, ExtractedBloodValue, ScanResult, ValueComparator } from '../types';
+import type { LLMMessage, LLMResponse, UserData, ExtractedBloodValue, ScanResult, ValueComparator, ValueStatus } from '../types';
 import { findReferenceValue, matchReferenceValue } from './fileStore';
+import { getEffectiveRange, getValueStatus } from './status';
 
 const SYSTEM_PROMPT = `Du bist ein hilfreicher medizinischer Assistent, der Blutwerte erklärt und einordnet.
 Du hast Zugriff auf die Blutwerte des Nutzers und kannst Trends analysieren.
@@ -11,20 +12,15 @@ Wenn Werte kritisch außerhalb des Referenzbereichs liegen, empfiehl dringend ei
 Beziehe dich auf die konkreten Werte des Nutzers, wenn relevant.
 Formatiere deine Antworten übersichtlich mit Markdown.`;
 
-function getEffectiveRange(ref: ReferenceValue, gender?: Gender): { min: number; max: number } {
-  let min = ref.ref_min ?? -Infinity;
-  let max = ref.ref_max ?? Infinity;
-
-  if (gender === 'female') {
-    if (ref.ref_min_female !== undefined) min = ref.ref_min_female;
-    if (ref.ref_max_female !== undefined) max = ref.ref_max_female;
-  } else if (gender === 'male') {
-    if (ref.ref_min_male !== undefined) min = ref.ref_min_male;
-    if (ref.ref_max_male !== undefined) max = ref.ref_max_male;
-  }
-
-  return { min, max };
-}
+const STATUS_MARKERS: Record<ValueStatus, string> = {
+  normal: '✓ Normal',
+  warning: '⚠ grenzwertig',
+  high: '⬆ ÜBER Referenzbereich',
+  low: '⬇ UNTER Referenzbereich',
+  critical_high: '🚨 KRITISCH HOCH',
+  critical_low: '🚨 KRITISCH NIEDRIG',
+  unknown: '? nicht bewertbar',
+};
 
 function buildUserContext(userData: UserData): string {
   let context = '';
@@ -88,20 +84,9 @@ function buildUserContext(userData: UserData): string {
       let status = '';
       if (ref) {
         const { min: refMin, max: refMax } = getEffectiveRange(ref, gender);
-        if (val.comparator === '<') {
-          // Messwert unterhalb der Bestimmungsgrenze: nur nach oben aussagekräftig
-          status = val.value <= refMax ? ' ✓ Normal (unterhalb der Bestimmungsgrenze)' : ' ? nicht bewertbar';
-        } else if (val.comparator === '>') {
-          status = val.value >= refMax ? ' ⬆ ÜBER Referenzbereich' : ' ? nicht bewertbar';
-        } else if (val.value < refMin) status = ' ⬇ UNTER Referenzbereich';
-        else if (val.value > refMax) status = ' ⬆ ÜBER Referenzbereich';
-        else status = ' ✓ Normal';
-        if (!val.comparator) {
-          if (ref.critical_low !== undefined && val.value <= ref.critical_low) status = ' 🚨 KRITISCH NIEDRIG';
-          if (ref.critical_high !== undefined && val.value >= ref.critical_high) status = ' 🚨 KRITISCH HOCH';
-        }
-        const rangeStr = refMin !== -Infinity && refMax !== Infinity ? ` [Ref: ${refMin}–${refMax}]` : '';
-        status += rangeStr;
+        status = ` ${STATUS_MARKERS[getValueStatus(val.value, ref, gender, val.comparator)]}`;
+        if (val.comparator) status += ' (Bestimmungsgrenze)';
+        if (refMin !== -Infinity && refMax !== Infinity) status += ` [Ref: ${refMin}–${refMax}]`;
       }
       context += `- ${val.name}: ${val.comparator ?? ''}${val.value} ${val.unit}${status}\n`;
     }
@@ -168,7 +153,8 @@ async function callGemini(
   systemPrompt: string,
   model: string,
   apiKey: string,
-  baseUrl?: string
+  baseUrl?: string,
+  temperature = 0.7
 ): Promise<string> {
   const key = normalizeApiKey(apiKey);
   if (!key) throw new Error('LLM_API_KEY ist nicht konfiguriert.');
@@ -182,8 +168,8 @@ async function callGemini(
     system_instruction: { parts: [{ text: systemPrompt }] },
     contents,
     generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 4096,
+      temperature,
+      maxOutputTokens: 8192,
     },
   };
 
@@ -209,7 +195,8 @@ async function callOpenAI(
   systemPrompt: string,
   model: string,
   apiKey: string,
-  baseUrl = 'https://api.openai.com/v1'
+  baseUrl = 'https://api.openai.com/v1',
+  temperature = 0.7
 ): Promise<string> {
   const url = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
 
@@ -224,7 +211,7 @@ async function callOpenAI(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({ model, messages: allMessages, max_tokens: 4096 }),
+    body: JSON.stringify({ model, messages: allMessages, max_tokens: 4096, temperature }),
   });
 
   if (!response.ok) {
@@ -247,7 +234,8 @@ async function callAnthropic(
   messages: LLMMessage[],
   systemPrompt: string,
   model: string,
-  apiKey: string
+  apiKey: string,
+  temperature = 0.7
 ): Promise<string> {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -261,6 +249,7 @@ async function callAnthropic(
       system: systemPrompt,
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
       max_tokens: 4096,
+      temperature,
     }),
   });
 
@@ -284,7 +273,8 @@ async function callOllama(
   messages: LLMMessage[],
   systemPrompt: string,
   model: string,
-  baseUrl = 'http://localhost:11434'
+  baseUrl = 'http://localhost:11434',
+  temperature = 0.7
 ): Promise<string> {
   const url = `${baseUrl.replace(/\/$/, '')}/api/chat`;
 
@@ -296,7 +286,7 @@ async function callOllama(
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, messages: allMessages, stream: false }),
+    body: JSON.stringify({ model, messages: allMessages, stream: false, options: { temperature } }),
   });
 
   if (!response.ok) {
@@ -313,73 +303,80 @@ async function callOllama(
   return data.message?.content ?? '';
 }
 
+// ─── Provider-neutraler Aufruf ────────────────────────────────────────────────
+
+export async function callLLM(
+  messages: LLMMessage[],
+  systemPrompt: string,
+  temperature = 0.7
+): Promise<string> {
+  const config = getConfig();
+
+  switch (config.LLM_PROVIDER) {
+    case 'gemini':
+      return callGemini(
+        messages,
+        systemPrompt,
+        config.LLM_MODEL,
+        config.LLM_API_KEY || '',
+        config.LLM_API_URL,
+        temperature
+      );
+
+    case 'openai':
+      return callOpenAI(
+        messages,
+        systemPrompt,
+        config.LLM_MODEL,
+        config.LLM_API_KEY || '',
+        'https://api.openai.com/v1',
+        temperature
+      );
+
+    case 'openai_compatible':
+      return callOpenAI(
+        messages,
+        systemPrompt,
+        config.LLM_MODEL,
+        config.LLM_API_KEY || '',
+        config.LLM_API_URL || 'http://localhost:8080/v1',
+        temperature
+      );
+
+    case 'anthropic':
+      return callAnthropic(
+        messages,
+        systemPrompt,
+        config.LLM_MODEL,
+        config.LLM_API_KEY || '',
+        temperature
+      );
+
+    case 'ollama':
+      return callOllama(
+        messages,
+        systemPrompt,
+        config.LLM_MODEL,
+        config.LLM_API_URL || 'http://localhost:11434',
+        temperature
+      );
+
+    default:
+      throw new Error(`Unknown LLM provider: ${config.LLM_PROVIDER}`);
+  }
+}
+
 // ─── Main Chat Function ───────────────────────────────────────────────────────
 
 export async function chat(
   messages: LLMMessage[],
   userData: UserData
 ): Promise<LLMResponse> {
-  const config = getConfig();
-
   const userContext = buildUserContext(userData);
   const fullSystemPrompt = `${SYSTEM_PROMPT}\n\n---\nKontext - Aktuelle Nutzerdaten:\n${userContext}`;
 
   try {
-    let content = '';
-
-    switch (config.LLM_PROVIDER) {
-      case 'gemini':
-        content = await callGemini(
-          messages,
-          fullSystemPrompt,
-          config.LLM_MODEL,
-          config.LLM_API_KEY || '',
-          config.LLM_API_URL
-        );
-        break;
-
-      case 'openai':
-        content = await callOpenAI(
-          messages,
-          fullSystemPrompt,
-          config.LLM_MODEL,
-          config.LLM_API_KEY || '',
-          'https://api.openai.com/v1'
-        );
-        break;
-
-      case 'openai_compatible':
-        content = await callOpenAI(
-          messages,
-          fullSystemPrompt,
-          config.LLM_MODEL,
-          config.LLM_API_KEY || '',
-          config.LLM_API_URL || 'http://localhost:8080/v1'
-        );
-        break;
-
-      case 'anthropic':
-        content = await callAnthropic(
-          messages,
-          fullSystemPrompt,
-          config.LLM_MODEL,
-          config.LLM_API_KEY || ''
-        );
-        break;
-
-      case 'ollama':
-        content = await callOllama(
-          messages,
-          fullSystemPrompt,
-          config.LLM_MODEL,
-          config.LLM_API_URL || 'http://localhost:11434'
-        );
-        break;
-
-      default:
-        throw new Error(`Unknown LLM provider: ${config.LLM_PROVIDER}`);
-    }
-
+    const content = await callLLM(messages, fullSystemPrompt);
     return { content };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

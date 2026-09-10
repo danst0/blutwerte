@@ -61,9 +61,25 @@ All file I/O goes through `backend/src/services/fileStore.ts`. The reference DB 
 
 ### Reference Values
 `data/reference_values.json` has a `version` field (currently `2.2.0`). Values support gender-specific ranges via `ref_min_female`, `ref_max_female`, `ref_min_male`, `ref_max_male`. The helper `getEffectiveRange(ref, gender?)` in `frontend/src/lib/utils.ts` selects the correct range.
+Das Backend spiegelt diese Logik in `backend/src/services/status.ts` (`getEffectiveRange`,
+`getValueStatus`); LLM-Kontext und PDF-Report nutzen sie, damit alle Ansichten denselben Status zeigen.
 
 ### LLM Integration
 `backend/src/services/llm.ts` supports: `gemini`, `openai`, `anthropic`, `ollama`, `openai_compatible`. Provider selected via `LLM_PROVIDER` env var. `buildUserContext()` constructs the system prompt context from user blood data including gender-specific reference ranges.
+
+### PDF-Report
+`POST /api/report/pdf` erzeugt einen Analysebericht (Titelbanner, Kennzahlen, KI-Einschätzung,
+Wertetabellen mit Referenz-Positionsbalken, Verlaufsdiagramme). Ablauf:
+`reportData.ts` (Modell aus `UserData` + Referenzen) → `aiReport.ts` (LLM-Aufruf, JSON-Antwort,
+Freitext-Fallback) → `pdfReport.ts` (PDFKit-Rendering, Vektor-Charts von Hand gezeichnet).
+
+Optionen im Request-Body: `months` (0 = gesamter Verlauf), `scope` (`all` | `abnormal`),
+`includeAi`. Die KI-Anfrage teilt sich das Tageslimit (50) mit Chat und Scan-Import; schlägt sie
+fehl, entsteht der Bericht trotzdem – mit Hinweisbox statt Analyse.
+
+PDFKit nutzt die eingebauten Type-1-Fonts (WinAnsi). `pdfReport.ts` filtert deshalb mit `w()`
+alle Zeichen außerhalb von WinAnsi heraus bzw. ersetzt sie (griechische Buchstaben, Pfeile,
+Hochstellungen wie `×10⁶`). Neue Textausgaben immer durch `w()` schicken.
 
 ### Admin Area
 Routes under `/api/admin/reference` (protected by `requireAdmin`) allow CRUD on `reference_values.json`. Admin users are identified by OIDC `sub` claim or email, configured via `ADMIN_USER_IDS` env var (comma-separated).
@@ -77,6 +93,8 @@ Routes under `/api/admin/reference` (protected by `requireAdmin`) allow CRUD on 
 
 ### Frontend
 - Path alias `@/` maps to `frontend/src/`
+- `ReportDialog` (Dashboard + Alle Werte) lädt das PDF via `report.pdf()` und stößt den Download
+  mit `downloadBlob()` an (`lib/api.ts`)
 - Auth state lives in `AuthContext` (`frontend/src/contexts/AuthContext.tsx`); access via `useAuth()` hook which exposes `{ user, loading, refetch }`
 - `user.gender` is sourced from `/api/auth/me` and stored in `AuthUser`; pass it to `getValueStatus(value, ref, gender?)` and `getEffectiveRange(ref, gender?)` whenever evaluating blood values
 - All API calls go through `frontend/src/lib/api.ts`

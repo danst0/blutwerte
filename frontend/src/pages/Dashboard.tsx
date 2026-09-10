@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/Badge';
 import { TrafficDot } from '@/components/TrafficLight';
+import { ReportDialog } from '@/components/ReportDialog';
 import { getValueStatus, getEffectiveRange, formatDate, formatValue, groupByCategory } from '@/lib/utils';
 import type { UserData, BloodEntry, BloodValue, ReferenceValue, ValueComparator } from '@/types';
 import {
@@ -17,6 +18,7 @@ import {
   Calendar,
   FlaskConical,
   AlertCircle,
+  FileDown,
 } from 'lucide-react';
 import {
   LineChart,
@@ -72,6 +74,7 @@ export default function Dashboard() {
   const [refDb, setRefDb] = useState<Record<string, ReferenceValue>>({});
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<'normal' | 'warning' | 'abnormal' | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     Promise.all([bvApi.getAll(), refApi.getAll()]).then(([data, refs]) => {
@@ -152,6 +155,8 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 animate-slide-up">
+      <ReportDialog open={reportOpen} onClose={() => setReportOpen(false)} />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -164,7 +169,7 @@ export default function Dashboard() {
               : 'Noch keine Blutwerte eingetragen'}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Link to="/enter">
             <Button icon={<PlusCircle className="w-4 h-4" />}>Werte eintragen</Button>
           </Link>
@@ -173,6 +178,15 @@ export default function Dashboard() {
               KI-Doktor
             </Button>
           </Link>
+          {(userData?.entries.length ?? 0) > 0 && (
+            <Button
+              variant="secondary"
+              icon={<FileDown className="w-4 h-4" />}
+              onClick={() => setReportOpen(true)}
+            >
+              PDF-Analyse
+            </Button>
+          )}
         </div>
       </div>
 

@@ -185,3 +185,14 @@ export interface ValueHistory {
   name: string;
   history: ValueHistoryPoint[];
 }
+
+// ─── PDF-Report ───────────────────────────────────────────────────────────────
+
+export type ReportScope = 'all' | 'abnormal';
+
+export interface ReportOptions {
+  /** 0 = gesamter Verlauf */
+  months: number;
+  scope: ReportScope;
+  includeAi: boolean;
+}

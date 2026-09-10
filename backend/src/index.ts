@@ -14,6 +14,7 @@ import { tokensRouter } from './routes/tokens';
 import { adminReferenceRouter } from './routes/adminReference';
 import { userRouter } from './routes/user';
 import { sharesRouter } from './routes/shares';
+import { reportRouter } from './routes/report';
 
 const FileStore = FileStoreFactory(session);
 const config = getConfig();
@@ -94,6 +95,7 @@ app.use('/api/tokens', tokensRouter);
 app.use('/api/admin/reference', adminReferenceRouter);
 app.use('/api/user', userRouter);
 app.use('/api/shares', sharesRouter);
+app.use('/api/report', reportRouter);
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 

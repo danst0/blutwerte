@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/Badge';
 import { TrafficDot } from '@/components/TrafficLight';
+import { ReportDialog } from '@/components/ReportDialog';
 import { getValueStatus, formatDate, formatValue } from '@/lib/utils';
 import type { UserData, BloodEntry, ReferenceValue } from '@/types';
 import {
@@ -16,6 +17,7 @@ import {
   Calendar,
   FlaskConical,
   FileText,
+  FileDown,
 } from 'lucide-react';
 
 export default function AllValues() {
@@ -27,6 +29,7 @@ export default function AllValues() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const load = async () => {
     const [data, refs] = await Promise.all([bvApi.getAll(), refApi.getAll()]);
@@ -102,6 +105,8 @@ export default function AllValues() {
 
   return (
     <div className="space-y-6 animate-slide-up">
+      <ReportDialog open={reportOpen} onClose={() => setReportOpen(false)} />
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Alle Blutwert-Einträge</h1>
@@ -110,6 +115,16 @@ export default function AllValues() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          {entries.length > 0 && (
+            <Button
+              variant="secondary"
+              onClick={() => setReportOpen(true)}
+              icon={<FileDown className="w-4 h-4" />}
+              size="sm"
+            >
+              PDF-Analyse
+            </Button>
+          )}
           <Button variant="secondary" onClick={exportCSV} icon={<FileText className="w-4 h-4" />} size="sm">
             CSV Export
           </Button>
