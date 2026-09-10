@@ -177,22 +177,34 @@ export function getReferenceDatabase(): ReferenceDatabase {
  */
 function normalizeVariants(name: string): string[] {
   const base = name.toLowerCase().trim();
-  const forms = new Set<string>([base]);
-  if (base.includes('ß')) forms.add(base.replace(/ß/g, 'beta'));
+  const raw = new Set<string>([base]);
+  if (base.includes('ß')) raw.add(base.replace(/ß/g, 'beta'));
 
-  return Array.from(forms)
-    .map((form) =>
-      form
-        .replace(/α/g, 'alpha')
-        .replace(/β/g, 'beta')
-        .replace(/γ/g, 'gamma')
-        .replace(/ä/g, 'ae')
-        .replace(/ö/g, 'oe')
-        .replace(/ü/g, 'ue')
-        .replace(/ß/g, 'ss')
-        .replace(/[^a-z0-9]/g, '')
-    )
-    .filter((form) => form.length > 0);
+  const forms = new Set<string>();
+  for (const form of raw) {
+    const normalized = form
+      .replace(/α/g, 'alpha')
+      .replace(/β/g, 'beta')
+      .replace(/γ/g, 'gamma')
+      .replace(/ä/g, 'ae')
+      .replace(/ö/g, 'oe')
+      .replace(/ü/g, 'ue')
+      .replace(/ß/g, 'ss')
+      .replace(/[^a-z0-9]/g, '');
+    if (!normalized) continue;
+
+    forms.add(normalized);
+
+    // Befunde tippen griechische Buchstaben oft als lateinische Ähnlichkeiten:
+    // "a1-Globulin", "y-GT". Beide Seiten erzeugen dieselbe Variante.
+    const lookalike = normalized
+      .replace(/alpha/g, 'a')
+      .replace(/beta/g, 'b')
+      .replace(/gamma/g, 'y');
+    if (lookalike !== normalized) forms.add(lookalike);
+  }
+
+  return Array.from(forms);
 }
 
 function labelForms(ref: ReferenceValue): Array<{ forms: string[]; isName: boolean }> {
