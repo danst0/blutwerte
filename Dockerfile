@@ -1,5 +1,5 @@
 # ─── Stage 1: Build Frontend ──────────────────────────────────────────────────
-FROM node:20-alpine AS frontend-builder
+FROM node:22-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
@@ -10,7 +10,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # ─── Stage 2: Build Backend ───────────────────────────────────────────────────
-FROM node:20-alpine AS backend-builder
+FROM node:22-alpine AS backend-builder
 
 WORKDIR /app/backend
 
@@ -23,7 +23,7 @@ COPY backend/ ./
 RUN npm run build
 
 # ─── Stage 3: Install production-only backend deps ────────────────────────────
-FROM node:20-alpine AS backend-deps
+FROM node:22-alpine AS backend-deps
 
 WORKDIR /app/backend
 
@@ -31,10 +31,11 @@ COPY backend/package*.json ./
 RUN npm ci --omit=dev
 
 # ─── Stage 4: Production Image ────────────────────────────────────────────────
-FROM node:20-alpine AS production
+FROM node:22-alpine AS production
 
-# Install curl for health check
-RUN apk add --no-cache curl
+# Install curl for health check; apk upgrade holds OS fixes that land before
+# the next base image (Trivy 2026-11-19: brotli CVE-2026-111497)
+RUN apk upgrade --no-cache && apk add --no-cache curl
 
 # Create non-root user
 RUN addgroup -g 1001 -S appuser && \
