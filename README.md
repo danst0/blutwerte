@@ -51,7 +51,10 @@ Alle Einstellungen werden über Umgebungsvariablen gesetzt (siehe `.env.example`
 | OpenAI | `openai` | GPT-4o o.ä. |
 | Anthropic | `anthropic` | Claude-Modelle |
 | Ollama (lokal) | `ollama` | Kein API-Key nötig |
-| OpenAI-kompatibel | `openai_compatible` | LM Studio, vLLM, … |
+| OpenAI-kompatibel | `openai_compatible` | OpenRouter (`LLM_API_URL=https://openrouter.ai/api/v1`), LM Studio, vLLM, … |
+
+Der Scan-Import (Foto/PDF eines Laborbefunds) funktioniert mit `gemini`, `openai`, `anthropic` und
+`openai_compatible`, sofern das Modell Bild- bzw. PDF-Eingaben unterstützt. Mit `ollama` ist er nicht verfügbar.
 
 ### Entwicklung ohne Docker
 

@@ -186,7 +186,7 @@ export default function ScanImport() {
               <ScanLine className="w-12 h-12 text-blue-500 animate-pulse" />
             </div>
             <p className="text-gray-600 dark:text-gray-400 text-sm">
-              Gemini analysiert deinen Laborbericht...
+              Die KI analysiert deinen Laborbericht...
             </p>
             <p className="text-gray-400 dark:text-gray-500 text-xs">
               Dies kann einige Sekunden dauern

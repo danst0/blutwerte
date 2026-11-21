@@ -466,23 +466,15 @@ function matchAndEnrichValues(rawValues: RawScanValue[]): ExtractedBloodValue[] 
   });
 }
 
-export async function analyzeBloodTestImage(
-  imageBuffer: Buffer,
-  mimeType: string
-): Promise<ScanResult> {
-  const config = getConfig();
+// ─── Scan-Import: Bild/PDF an das jeweilige Modell schicken ──────────────────
 
-  if (config.LLM_PROVIDER !== 'gemini') {
-    throw new Error('Scan-Import ist nur mit dem Gemini-Provider verfügbar.');
-  }
-
-  const apiKey = normalizeApiKey(config.LLM_API_KEY || '');
-  if (!apiKey) throw new Error('LLM_API_KEY ist nicht konfiguriert.');
-
-  const model = config.LLM_MODEL || 'gemini-2.5-flash';
-
-  const base64Data = imageBuffer.toString('base64');
-
+async function scanWithGemini(
+  base64Data: string,
+  mimeType: string,
+  model: string,
+  apiKey: string,
+  baseUrl: string | undefined
+): Promise<string> {
   const body = {
     contents: [
       {
@@ -499,7 +491,7 @@ export async function analyzeBloodTestImage(
     },
   };
 
-  const response = await geminiFetch(model, apiKey, config.LLM_API_URL, body);
+  const response = await geminiFetch(model, apiKey, baseUrl, body);
 
   if (!response.ok) {
     throw await geminiError(response);
@@ -511,8 +503,123 @@ export async function analyzeBloodTestImage(
   };
 
   if (data.error) throw new Error(`Gemini error: ${data.error.message}`);
+  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+}
 
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+// OpenAI-Chat-Completions-Format, das auch OpenRouter versteht: Bilder als
+// image_url-Data-URI, PDFs als file-Part.
+async function scanWithOpenAI(
+  base64Data: string,
+  mimeType: string,
+  model: string,
+  apiKey: string,
+  baseUrl: string
+): Promise<string> {
+  const dataUri = `data:${mimeType};base64,${base64Data}`;
+  const filePart = mimeType === 'application/pdf'
+    ? { type: 'file', file: { filename: 'laborbefund.pdf', file_data: dataUri } }
+    : { type: 'image_url', image_url: { url: dataUri } };
+
+  const response = await fetch(`${baseUrl.replace(/\/$/, '')}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: 'user', content: [filePart, { type: 'text', text: SCAN_PROMPT }] }],
+      max_tokens: 8192,
+      temperature: 0.1,
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`OpenAI API error ${response.status}: ${err}`);
+  }
+
+  const data = await response.json() as {
+    choices?: Array<{ message: { content: string } }>;
+    error?: { message: string };
+  };
+
+  if (data.error) throw new Error(`OpenAI error: ${data.error.message}`);
+  return data.choices?.[0]?.message?.content ?? '';
+}
+
+async function scanWithAnthropic(
+  base64Data: string,
+  mimeType: string,
+  model: string,
+  apiKey: string
+): Promise<string> {
+  const source = { type: 'base64', media_type: mimeType, data: base64Data };
+  const filePart = mimeType === 'application/pdf'
+    ? { type: 'document', source }
+    : { type: 'image', source };
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: 'user', content: [filePart, { type: 'text', text: SCAN_PROMPT }] }],
+      max_tokens: 8192,
+      temperature: 0.1,
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Anthropic API error ${response.status}: ${err}`);
+  }
+
+  const data = await response.json() as {
+    content?: Array<{ text: string }>;
+    error?: { message: string };
+  };
+
+  if (data.error) throw new Error(`Anthropic error: ${data.error.message}`);
+  return data.content?.[0]?.text ?? '';
+}
+
+export async function analyzeBloodTestImage(
+  imageBuffer: Buffer,
+  mimeType: string
+): Promise<ScanResult> {
+  const config = getConfig();
+
+  const apiKey = normalizeApiKey(config.LLM_API_KEY || '');
+  if (!apiKey) throw new Error('LLM_API_KEY ist nicht konfiguriert.');
+
+  const base64Data = imageBuffer.toString('base64');
+
+  let text: string;
+  switch (config.LLM_PROVIDER) {
+    case 'gemini':
+      text = await scanWithGemini(
+        base64Data, mimeType, config.LLM_MODEL || 'gemini-2.5-flash', apiKey, config.LLM_API_URL
+      );
+      break;
+    case 'openai':
+      text = await scanWithOpenAI(base64Data, mimeType, config.LLM_MODEL, apiKey, 'https://api.openai.com/v1');
+      break;
+    case 'openai_compatible':
+      text = await scanWithOpenAI(
+        base64Data, mimeType, config.LLM_MODEL, apiKey, config.LLM_API_URL || 'http://localhost:8080/v1'
+      );
+      break;
+    case 'anthropic':
+      text = await scanWithAnthropic(base64Data, mimeType, config.LLM_MODEL, apiKey);
+      break;
+    default:
+      throw new Error(`Scan-Import ist mit dem Provider "${config.LLM_PROVIDER}" nicht verfügbar.`);
+  }
 
   // Parse JSON from response (handle markdown code blocks)
   let jsonStr = text.trim();
