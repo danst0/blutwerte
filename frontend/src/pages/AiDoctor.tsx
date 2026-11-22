@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import type { ChatMessage } from '@/types';
 import { MessageSquareHeart, Send, Trash2, AlertCircle, User, Bot, Loader2 } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isToday, isYesterday, isSameYear } from 'date-fns';
 import { de } from 'date-fns/locale';
 
 const SUGGESTED_PROMPTS = [
@@ -30,15 +30,39 @@ function formatMarkdown(text: string): string {
     .replace(/\n/g, '<br/>');
 }
 
+function safeParse(ts: string): Date | null {
+  const d = parseISO(ts);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function dayKey(ts: string): string {
+  const d = safeParse(ts);
+  return d ? format(d, 'yyyy-MM-dd') : '';
+}
+
+function formatDayLabel(d: Date): string {
+  if (isToday(d)) return 'Heute';
+  if (isYesterday(d)) return 'Gestern';
+  return format(d, isSameYear(d, new Date()) ? 'EEEE, d. MMMM' : 'EEEE, d. MMMM yyyy', { locale: de });
+}
+
+function DateSeparator({ date }: { date: Date }) {
+  return (
+    <div className="flex items-center gap-3 py-1">
+      <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
+      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 px-2.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800">
+        {formatDayLabel(date)}
+      </span>
+      <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
+    </div>
+  );
+}
+
 function ChatBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user';
-  const time = (() => {
-    try {
-      return format(parseISO(message.timestamp), 'HH:mm', { locale: de });
-    } catch {
-      return '';
-    }
-  })();
+  const date = safeParse(message.timestamp);
+  const time = date ? format(date, 'HH:mm', { locale: de }) : '';
+  const fullDate = date ? format(date, "EEEE, d. MMMM yyyy 'um' HH:mm 'Uhr'", { locale: de }) : '';
 
   return (
     <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
@@ -70,7 +94,13 @@ function ChatBubble({ message }: { message: ChatMessage }) {
             />
           )}
         </div>
-        <span className="text-xs text-gray-400 dark:text-gray-500 mt-1 px-1">{time}</span>
+        <time
+          dateTime={message.timestamp}
+          title={fullDate}
+          className="text-xs text-gray-400 dark:text-gray-500 mt-1 px-1"
+        >
+          {time}
+        </time>
       </div>
     </div>
   );
@@ -211,9 +241,17 @@ export default function AiDoctor() {
           </div>
         ) : (
           <>
-            {messages.map((msg) => (
-              <ChatBubble key={msg.id} message={msg} />
-            ))}
+            {messages.map((msg, i) => {
+              const key = dayKey(msg.timestamp);
+              const showSeparator = key !== '' && (i === 0 || dayKey(messages[i - 1].timestamp) !== key);
+              const date = showSeparator ? safeParse(msg.timestamp) : null;
+              return (
+                <React.Fragment key={msg.id}>
+                  {date && <DateSeparator date={date} />}
+                  <ChatBubble message={msg} />
+                </React.Fragment>
+              );
+            })}
             {loading && (
               <div className="flex gap-3">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-blue-600 flex items-center justify-center flex-shrink-0">
