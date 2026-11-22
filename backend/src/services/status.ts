@@ -47,10 +47,14 @@ export function getValueStatus(
   if (value < refMin) return 'low';
   if (value > refMax) return 'high';
 
-  // Warning zone: within 10% of the limit
-  const range = refMax - refMin;
-  const buffer = range * 0.1;
-  if (value < refMin + buffer || value > refMax - buffer) return 'warning';
+  // Warning zone: within 10% of the limit. Bei einseitigen Spannen (nur Min oder
+  // nur Max) wäre range unendlich – dann 10 % des vorhandenen Grenzwerts nehmen.
+  const hasMin = Number.isFinite(refMin);
+  const hasMax = Number.isFinite(refMax);
+  const buffer = hasMin && hasMax
+    ? (refMax - refMin) * 0.1
+    : Math.abs(hasMin ? refMin : hasMax ? refMax : 0) * 0.1;
+  if ((hasMin && value < refMin + buffer) || (hasMax && value > refMax - buffer)) return 'warning';
 
   return 'normal';
 }

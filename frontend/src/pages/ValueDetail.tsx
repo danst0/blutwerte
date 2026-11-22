@@ -99,8 +99,9 @@ export default function ValueDetail() {
     const vals = chartData.map((d) => d.value);
     const min = Math.min(...vals);
     const max = Math.max(...vals);
-    const refMin = effectiveRange?.min ?? min;
-    const refMax = effectiveRange?.max ?? max;
+    // Offene Grenzen (±Infinity) dürfen die Achse nicht sprengen
+    const refMin = Number.isFinite(effectiveRange?.min) ? effectiveRange!.min : min;
+    const refMax = Number.isFinite(effectiveRange?.max) ? effectiveRange!.max : max;
     const critLow = ref?.critical_low ?? refMin;
     const critHigh = ref?.critical_high ?? refMax;
     const dataMin = Math.min(min, refMin, critLow);

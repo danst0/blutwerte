@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to coding agents (Claude Code, Codex, …) when working with code in this repository.
 
 ## Development Commands
 
@@ -60,7 +60,7 @@ No database. All data is file-based:
 All file I/O goes through `backend/src/services/fileStore.ts`. The reference DB is cached in-memory (`_referenceCache`); call `saveReferenceDatabase()` to invalidate the cache.
 
 ### Reference Values
-`data/reference_values.json` has a `version` field (currently `2.2.0`). Values support gender-specific ranges via `ref_min_female`, `ref_max_female`, `ref_min_male`, `ref_max_male`. The helper `getEffectiveRange(ref, gender?)` in `frontend/src/lib/utils.ts` selects the correct range.
+`data/reference_values.json` has a `version` field (currently `2.4.0`). Values support gender-specific ranges via `ref_min_female`, `ref_max_female`, `ref_min_male`, `ref_max_male`. The helper `getEffectiveRange(ref, gender?)` in `frontend/src/lib/utils.ts` selects the correct range.
 Das Backend spiegelt diese Logik in `backend/src/services/status.ts` (`getEffectiveRange`,
 `getValueStatus`); LLM-Kontext und PDF-Report nutzen sie, damit alle Ansichten denselben Status zeigen.
 
