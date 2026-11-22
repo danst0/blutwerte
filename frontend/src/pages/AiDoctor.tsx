@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import type { ChatMessage } from '@/types';
 import { MessageSquareHeart, Send, Trash2, AlertCircle, User, Bot, Loader2 } from 'lucide-react';
-import { format, parseISO, isToday, isYesterday, isSameYear } from 'date-fns';
+import { format, parseISO, isToday, isYesterday } from 'date-fns';
 import { de } from 'date-fns/locale';
 
 const SUGGESTED_PROMPTS = [
@@ -43,7 +43,7 @@ function dayKey(ts: string): string {
 function formatDayLabel(d: Date): string {
   if (isToday(d)) return 'Heute';
   if (isYesterday(d)) return 'Gestern';
-  return format(d, isSameYear(d, new Date()) ? 'EEEE, d. MMMM' : 'EEEE, d. MMMM yyyy', { locale: de });
+  return format(d, 'EEEE, d. MMMM yyyy', { locale: de });
 }
 
 function DateSeparator({ date }: { date: Date }) {
